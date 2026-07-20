@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>POS Barber & Warkop</title>
+  <meta name="description" content="Aplikasi kasir untuk usaha Barber & Warkop — transaksi, dashboard, inventory, laporan dalam satu aplikasi." />
+
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/favicon-32.png" />
+  <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="POS BW" />
+
+  <link rel="stylesheet" href="./css/app.css" />
+
+  <script>
+    // Terapkan tema tersimpan SEBELUM render pertama supaya tidak ada "kedipan" tema salah.
+    (function () {
+      try {
+        var saved = localStorage.getItem('pos.theme');
+        var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.classList.add('dark');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+  <div id="app">
+    <div class="flex min-h-screen items-center justify-center">
+      <div class="text-center">
+        <div class="mb-3 text-4xl">💈☕</div>
+        <div class="text-sm text-slate-400">Memuat POS Barber &amp; Warkop...</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

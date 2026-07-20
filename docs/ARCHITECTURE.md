@@ -1,8 +1,9 @@
 # Arsitektur Aplikasi Kasir POS Barber & Warkop
 
-Status: **Fase 1 (Backend & Database) selesai.** Dokumen ini menjelaskan keputusan
-arsitektur yang dipakai di seluruh proyek, supaya konsisten saat fase-fase
-berikutnya (Frontend, Dashboard, Modul Barber/Warkop, dst.) dibangun.
+Status: **Fase 1 (Backend & Database) dan Fase 2 (Frontend Shell & PWA)
+selesai.** Dokumen ini menjelaskan keputusan arsitektur yang dipakai di
+seluruh proyek, supaya konsisten saat fase-fase berikutnya (Dashboard, Modul
+Barber/Warkop, dst.) dibangun.
 
 ## 1. Stack
 
@@ -175,3 +176,93 @@ fungsi murni di atas) dan direview manual baris-per-baris. Checklist
 smoke-test manual pasca-deploy ada di `docs/SPREADSHEET_SETUP.md`.
 
 Jalankan test: `npm test` (semua) atau `npm run test:backend`.
+
+## 8. Frontend (Fase 2)
+
+### Struktur
+```
+frontend/js/core/     api.js, auth.js, router.js, state.js, ui.js, db-cache.js, config.js, format.js
+frontend/js/modules/  connection-setup, auth (login), shell (layout), home,
+                       settings, users, auditlog, backup — 1 folder per modul,
+                       masing-masing mengekspor 1 fungsi render(container, params)
+frontend/css/         input.css (source Tailwind) -> app.css (build, DI-COMMIT
+                       supaya frontend jalan tanpa build step di hosting statis)
+```
+
+Halaman JS dirender lewat template string (`innerHTML`) + `addEventListener`,
+bukan file `.html` partial terpisah — lebih sederhana untuk PWA (tidak perlu
+fetch tambahan per halaman) dan tetap modular karena 1 file = 1 modul.
+
+### Routing & RBAC di sisi client
+`core/router.js` adalah hash-router kecil (`compileRoutePath`/`matchPath`
+murni & diuji lewat Node) dengan dukungan param dinamis (`/transaksi/:id`,
+dipakai mulai Fase 4). Setiap route punya `roles: string[] | null`; `app.js`
+menyediakan fungsi `guard` yang menolak akses kalau (a) `apiBaseUrl` belum
+diisi, (b) belum login, atau (c) role user tidak termasuk `roles` route
+tsb — best-effort UX saja, **RBAC yang sesungguhnya tetap di-enforce backend**
+(`Validation.js`), karena kode client selalu bisa dilewati oleh pengguna yang
+punya akses DevTools.
+
+Menu sidebar (`shell/layout.js`) hanya menampilkan tautan ke modul yang
+role user berhak akses DAN yang fitur-nya sudah benar-benar ada — supaya
+tidak ada link ke halaman kosong/dummy di fase manapun.
+
+### Koneksi ke backend
+URL Web App (beda per instalasi) disimpan di `localStorage`, diisi lewat
+layar "Pengaturan Koneksi" yang muncul otomatis kalau kosong. `core/api.js`
+selalu POST dengan `Content-Type: text/plain` (lihat §2) dan melempar
+`ApiError` (punya `.code` sama seperti error backend) supaya halaman bisa
+menampilkan pesan yang konsisten.
+
+### Offline & PWA
+- `core/db-cache.js`: wrapper IndexedDB — antrean aksi offline
+  (`enqueueAction`/`getQueuedActions`), cache ber-TTL, & draft autosave.
+  Infrastrukturnya sudah lengkap di Fase 2; modul transaksi Fase 4/5 tinggal
+  memakai `apiCall(action, payload, { queueOnOffline: true })`.
+- `service-worker.js`: cache-first-dengan-revalidate untuk asset same-origin
+  saja (GET). Request ke backend Apps Script (POST, cross-origin) sengaja
+  tidak pernah disentuh service worker — data transaksi harus selalu fresh.
+- `manifest.webmanifest` + ikon (`assets/icons/`, di-generate dari
+  `icon-source.svg`/`maskable-source.svg` lewat `sharp`) untuk instalasi
+  Android/Desktop/iOS. Lihat `docs/PWA_INSTALL.md`.
+
+### Dark mode & desain
+Tailwind `darkMode: 'class'`, class `dark` di `<html>` di-toggle & disimpan
+di `localStorage` (`core/ui.js`), diterapkan lewat inline script kecil di
+`<head>` SEBELUM render pertama (mencegah flash tema salah). Warna brand
+(`barber`/`warkop`/`gabungan`) & efek glassmorphism (`.glass-card`,
+`backdrop-blur`) didefinisikan sebagai komponen Tailwind di `input.css`.
+
+**Catatan gotcha CSS yang ditemukan & diperbaiki saat testing browser
+sungguhan:** teks di dalam elemen `<a>` yang sudah pernah dikunjungi
+(`:visited`) TIDAK mewarisi `color` dari parent seperti elemen biasa —
+browser memaksakan warna `:visited` miliknya sendiri (proteksi privasi
+anti-history-sniffing), dan `getComputedStyle` bahkan berbohong soal warna
+aktualnya (selalu melaporkan warna seolah belum dikunjungi) sehingga tidak
+bisa dipakai untuk mendeteksi bug ini — hanya screenshot piksel asli yang
+menunjukkan warna redup sesungguhnya. Efeknya: judul kartu/link yang sudah
+pernah diklik tampak pudar di dark mode. **Solusi:** setiap `<a>` yang
+warnanya penting harus eksplisit set `visited:text-*` (dan varian
+`dark:visited:text-*`), tidak cukup mengandalkan `text-*`/inherit biasa —
+lihat `.nav-link` di `input.css` dan kartu modul di `modules/home/index.js`
+sebagai contoh pola yang benar. Berlaku untuk SEMUA `<a>` baru di fase-fase
+berikutnya.
+
+### Testing frontend
+Logika murni (tanpa DOM): `core/format.js`, `core/router.js`
+(`compileRoutePath`/`matchPath`), `core/auth.js` (`hasRole`), `core/db-cache.js`
+(`isCacheEntryExpired`) — diuji lewat Node (`tests/frontend/*.test.js`,
+folder `frontend/` punya `package.json` sendiri berisi `{"type":"module"}`
+supaya file ESM-nya bisa di-`import()` dari test Node tanpa mengubah
+konvensi module root project yang CommonJS).
+
+UI & integrasi end-to-end diverifikasi manual dengan Playwright
+(`playwright-core`, memakai Chromium yang sudah tersedia di environment)
+menjalankan static server lokal dan **mem-mock response backend persis
+sesuai kontrak JSON Fase 1** lewat `page.route()` — teknik testing standar
+di sisi frontend, BUKAN mock server yang di-ship sebagai bagian aplikasi.
+Skenario yang diverifikasi: redirect Pengaturan Koneksi → Login → Beranda,
+RBAC nav per role (Owner vs Kasir), akses langsung URL yang tidak diizinkan,
+dark mode toggle, CRUD user, backup, logout, dan tidak ada error console.
+Skrip verifikasi ini disimpan di luar repo (scratchpad sesi), sesuai
+keputusan untuk tidak menyimpan mock backend sebagai deliverable.
