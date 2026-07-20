@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Apps Script clasp config (berisi scriptId milik akun Google masing-masing user, jangan di-commit)
+.clasp.json
+.clasprc.json
+
+# Build output
+frontend/css/dist/
+dist/
+
+# OS / editor
+.DS_Store
+*.log
+.vscode/
