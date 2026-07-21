@@ -10,6 +10,7 @@ import { isAuthenticated, hasPermission } from './auth.js';
 const routes = new Map();
 let appRoot = null;
 let currentCleanup = null;
+let renderToken = 0;
 
 /**
  * @param {string} path - contoh: '/', '/login', '/barber/transaksi'
@@ -45,6 +46,14 @@ async function handleRouteChange() {
     route = routes.get('/403');
   }
 
+  // Token generasi render: kalau ada handleRouteChange() lain yang mulai
+  // SEBELUM route.render() di bawah selesai (mis. dua navigasi ke rute yang
+  // sama nyaris bersamaan), panggilan yang lebih lama harus membuang hasilnya
+  // sendiri alih-alih menimpa bookkeeping (currentCleanup) milik panggilan
+  // yang lebih baru -- mencegah dua instance komponen (mis. Chart.js) aktif
+  // berebut DOM/canvas yang sama.
+  const myToken = ++renderToken;
+
   if (typeof currentCleanup === 'function') {
     try { currentCleanup(); } catch { /* cleanup best-effort */ }
   }
@@ -53,6 +62,13 @@ async function handleRouteChange() {
 
   document.title = route.title ? `${route.title} · Kasir Barber & Warkop` : 'Kasir Barber & Warkop';
   const result = await route.render(appRoot);
+
+  if (myToken !== renderToken) {
+    if (typeof result === 'function') {
+      try { result(); } catch { /* cleanup best-effort */ }
+    }
+    return;
+  }
   if (typeof result === 'function') currentCleanup = result;
 }
 

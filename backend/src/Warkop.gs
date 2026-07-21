@@ -145,7 +145,7 @@ function warkopCreateTransaksi_(payload) {
     KasirID: session.userId,
     NamaKasir: session.nama,
     PelangganID: pelanggan ? pelanggan.ID : '',
-    ShiftID: payload.shiftId || '',
+    ShiftID: currentOpenShiftId_(session),
     CreatedAt: new Date(),
     UpdatedAt: new Date(),
     IsDeleted: false

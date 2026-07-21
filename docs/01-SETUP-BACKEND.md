@@ -41,8 +41,8 @@ memanggil Web App URL yang dihasilkan di sini.
    - `spreadsheetUrl` — link ke Google Spreadsheet database yang baru dibuat.
    - `ownerAccountCreated.username` = `owner`
    - `ownerAccountCreated.password` = password acak 8 karakter — **catat ini sekarang**, tidak akan ditampilkan lagi setelah sheet Kasir terisi.
-6. Buka `spreadsheetUrl` tersebut untuk memverifikasi 15 sheet berikut sudah dibuat dengan header:
-   `Dashboard, Transaksi Barber, Transaksi Warkop, Pengeluaran Barber, Pengeluaran Warkop, Capster, Kasir, Pelanggan, Produk Warkop, Layanan Barber, Inventory Barber, Inventory Warkop, Closing Shift, Audit Log, Settings`
+6. Buka `spreadsheetUrl` tersebut untuk memverifikasi 16 sheet berikut sudah dibuat dengan header:
+   `Dashboard, Transaksi Barber, Transaksi Warkop, Pengeluaran Barber, Pengeluaran Warkop, Capster, Kasir, Pelanggan, Produk Warkop, Layanan Barber, Inventory Barber, Inventory Warkop, Closing Shift, Gaji Capster, Audit Log, Settings`
 
 Fungsi `setupDatabase()` aman dijalankan berulang kali — sheet yang sudah punya
 header tidak akan ditimpa, dan akun Owner tidak akan dibuat dobel.
@@ -123,7 +123,7 @@ npm run test:backend
 ```
 
 Cakupan pengujian saat ini (18 test, semua lulus):
-- Pembuatan 15 sheet dengan header yang benar, dan idempotensi `setupDatabase()`.
+- Pembuatan 16 sheet dengan header yang benar, dan idempotensi `setupDatabase()`.
 - Seed Settings default & akun Owner (password acak, ter-hash, bukan plaintext).
 - Login sukses/gagal, validasi token, permission matrix per role.
 - Router `doPost` end-to-end (`ping`, `login`, `getMe`, action tidak dikenal).

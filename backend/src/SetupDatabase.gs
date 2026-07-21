@@ -55,6 +55,11 @@ SHEET_SCHEMAS_[SHEETS.CLOSING_SHIFT] = [
   'PengeluaranWarkop', 'TotalSeharusnya', 'UangKasFisik', 'SelisihKas',
   'CatatanKasir', 'Status', 'ClosedAt', 'ReopenedBy', 'ReopenedAt'
 ];
+SHEET_SCHEMAS_[SHEETS.GAJI_CAPSTER] = [
+  'ID', 'Periode', 'CapsterID', 'NamaCapster', 'PersentaseBagiHasil', 'TotalKepala',
+  'Pendapatan', 'BagiHasilAmount', 'Bonus', 'Potongan', 'Keterlambatan', 'TotalGaji',
+  'Catatan', 'DibuatOlehID', 'DibuatOleh', 'CreatedAt', 'UpdatedAt'
+];
 SHEET_SCHEMAS_[SHEETS.AUDIT_LOG] = [
   'ID', 'Timestamp', 'UserID', 'UserName', 'Aksi', 'Modul', 'DataSebelum', 'DataSesudah'
 ];

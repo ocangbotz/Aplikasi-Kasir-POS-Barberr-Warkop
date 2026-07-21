@@ -68,3 +68,69 @@ function searchPelanggan_(payload) {
   });
   return { pelanggan: matches.slice(0, 10) };
 }
+
+/** Daftar pelanggan (halaman Data Pelanggan), dengan pencarian & pagination. */
+function pelangganList_(payload) {
+  var session = requireAuth_(payload.token);
+  requirePermission_(session, 'pelanggan');
+
+  var data = getSheetData_(SHEETS.PELANGGAN);
+  var query = sanitizeString_(payload.query || '').toLowerCase();
+  var rows = data.rows.filter(function (r) {
+    if (!query) return true;
+    return String(r.Nama).toLowerCase().indexOf(query) !== -1 || normalizePhone_(r.NoHP).indexOf(normalizePhone_(query)) !== -1;
+  });
+  rows.sort(function (a, b) { return new Date(b.UpdatedAt) - new Date(a.UpdatedAt); });
+
+  var page = Math.max(Number(payload.page) || 1, 1);
+  var pageSize = Math.min(Math.max(Number(payload.pageSize) || 20, 1), 100);
+  var start = (page - 1) * pageSize;
+  return { pelanggan: rows.slice(start, start + pageSize), total: rows.length, page: page, pageSize: pageSize };
+}
+
+/** Detail satu pelanggan + riwayat transaksi Barber & Warkop mereka (Riwayat Haircut & pembelian). */
+function pelangganDetail_(payload) {
+  var session = requireAuth_(payload.token);
+  requirePermission_(session, 'pelanggan');
+  requireFields_(payload, ['id']);
+
+  var pelanggan = findRowById_(SHEETS.PELANGGAN, payload.id);
+  if (!pelanggan) throw new AppError_('NOT_FOUND', 'Pelanggan tidak ditemukan.');
+
+  var riwayatBarber = getSheetData_(SHEETS.TRANSAKSI_BARBER).rows
+    .filter(function (r) { return r.PelangganID === pelanggan.ID && r.IsDeleted !== true && r.IsDeleted !== 'TRUE'; })
+    .sort(function (a, b) { return new Date(b.CreatedAt) - new Date(a.CreatedAt); })
+    .slice(0, 20)
+    .map(function (r) {
+      var layanan = [];
+      try { layanan = JSON.parse(r.Layanan); } catch (e) { layanan = []; }
+      return { nomorTransaksi: r.NomorTransaksi, tanggal: r.Tanggal, layanan: layanan, grandTotal: r.GrandTotal, namaCapster: r.NamaCapster };
+    });
+
+  var riwayatWarkop = getSheetData_(SHEETS.TRANSAKSI_WARKOP).rows
+    .filter(function (r) { return r.PelangganID === pelanggan.ID && r.IsDeleted !== true && r.IsDeleted !== 'TRUE'; })
+    .sort(function (a, b) { return new Date(b.CreatedAt) - new Date(a.CreatedAt); })
+    .slice(0, 20)
+    .map(function (r) {
+      var items = [];
+      try { items = JSON.parse(r.Items); } catch (e) { items = []; }
+      return { nomorTransaksi: r.NomorTransaksi, tanggal: r.Tanggal, items: items, grandTotal: r.GrandTotal };
+    });
+
+  return { pelanggan: pelanggan, riwayatBarber: riwayatBarber, riwayatWarkop: riwayatWarkop };
+}
+
+function pelangganSetMember_(payload) {
+  var session = requireAuth_(payload.token);
+  requirePermission_(session, 'pelanggan');
+  requireFields_(payload, ['id']);
+
+  var pelanggan = findRowById_(SHEETS.PELANGGAN, payload.id);
+  if (!pelanggan) throw new AppError_('NOT_FOUND', 'Pelanggan tidak ditemukan.');
+
+  pelanggan.Member = !!payload.member;
+  pelanggan.UpdatedAt = new Date();
+  updateRowObject_(SHEETS.PELANGGAN, pelanggan._rowIndex, pelanggan);
+  writeAuditLog_(session, 'SET_MEMBER_PELANGGAN', SHEETS.PELANGGAN, '', pelanggan);
+  return { pelanggan: pelanggan };
+}

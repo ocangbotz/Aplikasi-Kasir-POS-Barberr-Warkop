@@ -157,7 +157,7 @@ function barberCreateTransaksi_(payload) {
     Catatan: sanitizeString_(payload.catatan),
     KasirID: session.userId,
     NamaKasir: session.nama,
-    ShiftID: payload.shiftId || '',
+    ShiftID: currentOpenShiftId_(session),
     CreatedAt: new Date(),
     UpdatedAt: new Date(),
     IsDeleted: false

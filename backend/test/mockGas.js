@@ -40,6 +40,10 @@ function createMockGas() {
     setFontWeight() { return this; }
     setBackground() { return this; }
     setFontColor() { return this; }
+    clearContent() {
+      this.sheet.data.splice(this.row - 1, this.numRows);
+      return this;
+    }
   }
 
   class MockSheet {

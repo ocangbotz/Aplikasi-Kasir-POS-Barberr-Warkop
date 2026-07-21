@@ -5,7 +5,6 @@
  */
 import { login } from '../core/auth.js';
 import { ApiError } from '../core/api.js';
-import { navigate } from '../core/router.js';
 import { APP_CONFIG } from '../core/config.js';
 
 export function renderLogin(root) {
@@ -55,7 +54,11 @@ export function renderLogin(root) {
     submitLabel.textContent = 'Memproses...';
     try {
       await login(username, password);
-      navigate('/');
+      // Tidak perlu navigate() manual di sini -- authStore.set() di dalam login()
+      // memicu mountShell() lewat subscription, yang otomatis merender rute saat
+      // ini (biasanya '/'). Memanggil navigate('/') di sini dulu menyebabkan
+      // race condition: dua render rute yang sama berjalan bersamaan dan
+      // membuat Chart.js gagal (canvas dipakai dua instance sekaligus).
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Gagal login. Coba lagi.';
       errorEl.textContent = message;

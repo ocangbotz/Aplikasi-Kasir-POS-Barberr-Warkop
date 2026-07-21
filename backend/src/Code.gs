@@ -49,7 +49,31 @@ var ROUTES = {
   pengeluaranCreate: function (p) { return pengeluaranCreate_(p); },
   pengeluaranList: function (p) { return pengeluaranList_(p); },
 
-  dashboardData: function (p) { return dashboardData_(p); }
+  dashboardData: function (p) { return dashboardData_(p); },
+
+  shiftGetCurrent: function (p) { return shiftGetCurrent_(p); },
+  shiftOpen: function (p) { return shiftOpen_(p); },
+  shiftClose: function (p) { return shiftClose_(p); },
+  shiftReopen: function (p) { return shiftReopen_(p); },
+  shiftList: function (p) { return shiftList_(p); },
+
+  gajiCapsterPreview: function (p) { return gajiCapsterPreview_(p); },
+  gajiCapsterSave: function (p) { return gajiCapsterSave_(p); },
+  gajiCapsterList: function (p) { return gajiCapsterList_(p); },
+
+  pelangganList: function (p) { return pelangganList_(p); },
+  pelangganDetail: function (p) { return pelangganDetail_(p); },
+  pelangganSetMember: function (p) { return pelangganSetMember_(p); },
+
+  usersList: function (p) { return usersList_(p); },
+  usersSave: function (p) { return usersSave_(p); },
+
+  ownerListTransaksi: function (p) { return ownerListTransaksi_(p); },
+  ownerUpdateTransaksi: function (p) { return ownerUpdateTransaksi_(p); },
+  ownerDeleteTransaksi: function (p) { return ownerDeleteTransaksi_(p); },
+  ownerRestoreTransaksi: function (p) { return ownerRestoreTransaksi_(p); },
+  ownerBackupData: function (p) { return ownerBackupData_(p); },
+  ownerRestoreData: function (p) { return ownerRestoreData_(p); }
 };
 
 function doGet(e) {

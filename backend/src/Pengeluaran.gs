@@ -57,7 +57,7 @@ function pengeluaranCreate_(payload) {
     FotoNotaURL: fotoUrl,
     InputOlehID: session.userId,
     InputOleh: session.nama,
-    ShiftID: payload.shiftId || '',
+    ShiftID: currentOpenShiftId_(session),
     CreatedAt: new Date()
   };
 

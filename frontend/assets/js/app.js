@@ -26,6 +26,13 @@ import { renderPengeluaranWarkop } from './pages/pengeluaran/warkop.js';
 import { renderDashboardGabungan } from './pages/dashboard/gabungan.js';
 import { renderDashboardBarber } from './pages/dashboard/barber.js';
 import { renderDashboardWarkop } from './pages/dashboard/warkop.js';
+import { renderShift } from './pages/shift/index.js';
+import { renderGajiCapster } from './pages/gaji-capster/index.js';
+import { renderPelanggan } from './pages/pelanggan/index.js';
+import { renderAuditLog } from './pages/audit-log/index.js';
+import { renderOwnerUsers } from './pages/owner/users.js';
+import { renderOwnerTransaksi } from './pages/owner/transaksi.js';
+import { renderOwnerBackup } from './pages/owner/backup.js';
 
 registerRoute('/login', { public: true, title: 'Masuk', render: renderLogin });
 registerRoute('/', { permission: 'dashboard', title: 'Dashboard Gabungan', render: renderDashboardGabungan });
@@ -47,6 +54,15 @@ registerRoute('/inventory/warkop', { permission: 'inventory', title: 'Inventory 
 
 registerRoute('/pengeluaran/barber', { permission: 'pengeluaran', title: 'Pengeluaran Barber', render: renderPengeluaranBarber });
 registerRoute('/pengeluaran/warkop', { permission: 'pengeluaran', title: 'Pengeluaran Warkop', render: renderPengeluaranWarkop });
+
+registerRoute('/shift', { permission: 'closingShift', title: 'Closing Shift', render: renderShift });
+registerRoute('/gaji-capster', { permission: 'gajiCapster', title: 'Gaji Capster', render: renderGajiCapster });
+registerRoute('/pelanggan', { permission: 'pelanggan', title: 'Data Pelanggan', render: renderPelanggan });
+
+registerRoute('/owner/users', { permission: 'kelolaUser', title: 'Kelola User', render: renderOwnerUsers });
+registerRoute('/owner/transaksi', { permission: 'editTransaksi', title: 'Kelola Transaksi', render: renderOwnerTransaksi });
+registerRoute('/owner/audit-log', { permission: 'auditLog', title: 'Audit Log', render: renderAuditLog });
+registerRoute('/owner/backup', { permission: 'backupRestore', title: 'Backup & Restore', render: renderOwnerBackup });
 registerRoute('/404', {
   public: true,
   title: 'Halaman Tidak Ditemukan',
@@ -83,6 +99,13 @@ registerNavItem({ path: '/warkop/produk', label: 'Menu', icon: '📋', permissio
 registerNavItem({ path: '/pengeluaran/warkop', label: 'Pengeluaran', icon: '💸', permission: 'pengeluaran', group: 'Warkop' });
 registerNavItem({ path: '/inventory/barber', label: 'Inventory Barber', icon: '📦', permission: 'inventory', group: 'Inventory' });
 registerNavItem({ path: '/inventory/warkop', label: 'Inventory Warkop', icon: '📦', permission: 'inventory', group: 'Inventory' });
+registerNavItem({ path: '/shift', label: 'Closing Shift', icon: '🧮', permission: 'closingShift', group: 'Operasional' });
+registerNavItem({ path: '/gaji-capster', label: 'Gaji Capster', icon: '💰', permission: 'gajiCapster', group: 'Operasional' });
+registerNavItem({ path: '/pelanggan', label: 'Pelanggan', icon: '👥', permission: 'pelanggan', group: 'Operasional' });
+registerNavItem({ path: '/owner/users', label: 'Kelola User', icon: '🔑', permission: 'kelolaUser', group: 'Owner Panel' });
+registerNavItem({ path: '/owner/transaksi', label: 'Kelola Transaksi', icon: '🗂️', permission: 'editTransaksi', group: 'Owner Panel' });
+registerNavItem({ path: '/owner/audit-log', label: 'Audit Log', icon: '📜', permission: 'auditLog', group: 'Owner Panel' });
+registerNavItem({ path: '/owner/backup', label: 'Backup & Restore', icon: '🗄️', permission: 'backupRestore', group: 'Owner Panel' });
 
 const appEl = document.getElementById('app');
 let currentShellMode = null; // 'guest' | 'app'

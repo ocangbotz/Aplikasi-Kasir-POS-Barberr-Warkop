@@ -13,7 +13,7 @@ const { createMockGas } = require('./mockGas');
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const FILES_IN_ORDER = [
   'Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Pelanggan.gs', 'Settings.gs',
-  'Barber.gs', 'Warkop.gs', 'Inventory.gs', 'Pengeluaran.gs', 'Dashboard.gs', 'Code.gs', 'SetupDatabase.gs'
+  'Barber.gs', 'Warkop.gs', 'Inventory.gs', 'Pengeluaran.gs', 'Dashboard.gs', 'Shift.gs', 'GajiCapster.gs', 'Users.gs', 'OwnerPanel.gs', 'Code.gs', 'SetupDatabase.gs'
 ];
 
 function loadContext() {
@@ -60,7 +60,7 @@ let setupSummary;
 test('setupDatabase() membuat spreadsheet & seluruh sheet', () => {
   setupSummary = ctx.setupDatabase();
   assert.ok(setupSummary.spreadsheetId);
-  assert.strictEqual(setupSummary.sheetsCreated.length, 15);
+  assert.strictEqual(setupSummary.sheetsCreated.length, 16);
 });
 
 test('setupDatabase() idempotent (jalan dua kali tidak duplikat header/owner)', () => {
@@ -70,7 +70,7 @@ test('setupDatabase() idempotent (jalan dua kali tidak duplikat header/owner)', 
   assert.strictEqual(before, after, 'akun owner tidak boleh terduplikasi');
 });
 
-test('Semua 15 sheet memiliki header sesuai skema', () => {
+test('Semua 16 sheet memiliki header sesuai skema', () => {
   Object.keys(ctx.SHEET_SCHEMAS_).forEach((name) => {
     const data = ctx.getSheetData_(name);
     assertValuesEqual(data.headers, ctx.SHEET_SCHEMAS_[name], 'header mismatch: ' + name);
@@ -600,6 +600,210 @@ test('Menu Terlaris & Kategori Terlaris Warkop dihitung dari qty terjual', () =>
   assert.ok(data.menuTerlaris.length > 0);
   assert.ok(data.kategoriTerlaris.length > 0);
   assert.ok(data.kategoriTerlaris.some((k) => k.kategori === 'Minuman'));
+});
+
+// --- Modul Closing Shift ---
+let currentShiftId;
+
+test('Kasir bisa membuka shift dengan saldo awal', () => {
+  const before = ctx.shiftGetCurrent_({ token: kasirToken }).shift;
+  assert.strictEqual(before, null, 'belum ada shift terbuka sebelum test ini');
+  const result = ctx.shiftOpen_({ token: kasirToken, saldoAwal: 100000 });
+  assert.strictEqual(result.shift.Status, 'Terbuka');
+  assert.strictEqual(result.shift.SaldoAwal, 100000);
+  currentShiftId = result.shift.ID;
+});
+
+test('Tidak bisa membuka shift kedua selagi shift pertama masih terbuka', () => {
+  assertThrowsCode(() => ctx.shiftOpen_({ token: kasirToken, saldoAwal: 50000 }), 'VALIDATION_ERROR');
+});
+
+test('Transaksi yang dibuat selagi shift terbuka otomatis ter-tag ShiftID', () => {
+  const trx = ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Shift Test', noHp: '081277788899', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Cash'
+  }).transaksi;
+  assert.strictEqual(trx.ShiftID, currentShiftId);
+
+  ctx.pengeluaranCreate_({ token: kasirToken, usaha: 'Barber', nominal: 15000, kategori: 'Operasional', tanggal: ctx.todayDateString_() });
+  const pengeluaranRow = ctx.getSheetData_(ctx.SHEETS.PENGELUARAN_BARBER).rows.slice(-1)[0];
+  assert.strictEqual(pengeluaranRow.ShiftID, currentShiftId);
+});
+
+test('shiftClose_ menghitung Cash/QRIS/Pengeluaran otomatis dari data transaksi shift ini, bukan input manual', () => {
+  const shiftBarberRows = ctx.getSheetData_(ctx.SHEETS.TRANSAKSI_BARBER).rows.filter((r) => r.ShiftID === currentShiftId && r.Status === 'Selesai');
+  const expectedCash = shiftBarberRows.filter((r) => r.MetodePembayaran === 'Cash').reduce((s, r) => s + r.GrandTotal, 0);
+  const expectedPengeluaran = ctx.getSheetData_(ctx.SHEETS.PENGELUARAN_BARBER).rows.filter((r) => r.ShiftID === currentShiftId).reduce((s, r) => s + r.Nominal, 0);
+  const expectedTotalSeharusnya = ctx.round2_(100000 + expectedCash - expectedPengeluaran);
+
+  const result = ctx.shiftClose_({ token: kasirToken, uangKasFisik: expectedTotalSeharusnya, catatanKasir: 'Pas' }).shift;
+  assert.strictEqual(result.CashBarber, expectedCash);
+  assert.strictEqual(result.PengeluaranBarber, expectedPengeluaran);
+  assert.strictEqual(result.TotalSeharusnya, expectedTotalSeharusnya);
+  assert.strictEqual(result.SelisihKas, 0);
+  assert.strictEqual(result.Status, 'Ditutup');
+});
+
+test('Selisih kas dihitung benar jika uang fisik tidak pas', () => {
+  ctx.shiftOpen_({ token: kasirToken, saldoAwal: 0 });
+  const closed = ctx.shiftClose_({ token: kasirToken, uangKasFisik: 5000, catatanKasir: 'Kurang' }).shift;
+  assert.strictEqual(closed.SelisihKas, ctx.round2_(5000 - closed.TotalSeharusnya));
+});
+
+test('Shift yang sudah ditutup tidak bisa ditutup lagi (tidak ada shift terbuka)', () => {
+  assertThrowsCode(() => ctx.shiftClose_({ token: kasirToken, uangKasFisik: 1000 }), 'VALIDATION_ERROR');
+});
+
+test('Kasir dilarang membuka kembali shift (reopenShift = false); Owner boleh', () => {
+  const lastShift = ctx.shiftList_({ token: ownerToken, pageSize: 1 }).shift[0];
+  assertThrowsCode(() => ctx.shiftReopen_({ token: kasirToken, id: lastShift.ID }), 'FORBIDDEN');
+  const reopened = ctx.shiftReopen_({ token: ownerToken, id: lastShift.ID }).shift;
+  assert.strictEqual(reopened.Status, 'Terbuka');
+  assert.strictEqual(reopened.ReopenedBy, 'Owner');
+  // Tutup lagi supaya tidak mengganggu test lain yang mengasumsikan tidak ada shift terbuka.
+  ctx.shiftClose_({ token: kasirToken, uangKasFisik: 0 });
+});
+
+// --- Modul Gaji Capster ---
+test('gajiCapsterPreview_ menghitung Total Kepala & Pendapatan otomatis dari transaksi bulan berjalan', () => {
+  const periode = ctx.todayDateString_().slice(0, 7);
+  const preview = ctx.gajiCapsterPreview_({ token: ownerToken, capsterId: capsterBudi.ID, periode });
+  const expected = ctx.getSheetData_(ctx.SHEETS.TRANSAKSI_BARBER).rows.filter((r) =>
+    r.CapsterID === capsterBudi.ID && r.Status === 'Selesai' && r.Tanggal.indexOf(periode) === 0);
+  assert.strictEqual(preview.totalKepala, expected.length);
+  assert.strictEqual(preview.pendapatan, ctx.round2_(expected.reduce((s, r) => s + r.GrandTotal, 0)));
+  assert.strictEqual(preview.bagiHasilAmount, ctx.round2_(preview.pendapatan * preview.persentaseBagiHasil / 100));
+});
+
+test('gajiCapsterSave_ menghitung Total Gaji = BagiHasil + Bonus - Potongan - Keterlambatan, lalu upsert per periode', () => {
+  const periode = ctx.todayDateString_().slice(0, 7);
+  const saved = ctx.gajiCapsterSave_({ token: ownerToken, capsterId: capsterBudi.ID, periode, bonus: 50000, potongan: 10000, keterlambatan: 5000 }).gaji;
+  assert.strictEqual(saved.TotalGaji, ctx.round2_(saved.BagiHasilAmount + 50000 - 10000 - 5000));
+
+  // Simpan lagi dengan angka berbeda -> harus update baris yang sama (upsert), bukan bikin baris baru.
+  const savedAgain = ctx.gajiCapsterSave_({ token: ownerToken, capsterId: capsterBudi.ID, periode, bonus: 100000, potongan: 0, keterlambatan: 0 }).gaji;
+  assert.strictEqual(savedAgain.ID, saved.ID);
+  const allForPeriode = ctx.gajiCapsterList_({ token: ownerToken, periode }).gaji.filter((g) => g.CapsterID === capsterBudi.ID);
+  assert.strictEqual(allForPeriode.length, 1, 'harus tetap 1 baris per capster per periode');
+});
+
+test('Kasir dilarang mengakses modul Gaji Capster', () => {
+  assertThrowsCode(() => ctx.gajiCapsterPreview_({ token: kasirToken, capsterId: capsterBudi.ID, periode: '2026-01' }), 'FORBIDDEN');
+});
+
+// --- Modul Pelanggan (list/detail/member) ---
+test('pelangganList_ & pelangganDetail_ menampilkan riwayat transaksi Barber pelanggan', () => {
+  const found = ctx.findPelangganByPhone_('081234567890'); // dibuat di test Barber sebelumnya (Andi)
+  assert.ok(found);
+  const list = ctx.pelangganList_({ token: kasirToken, query: 'Andi' }).pelanggan;
+  assert.ok(list.some((p) => p.ID === found.ID));
+
+  const detail = ctx.pelangganDetail_({ token: kasirToken, id: found.ID });
+  assert.ok(detail.riwayatBarber.length > 0);
+  assert.ok(Array.isArray(detail.riwayatBarber[0].layanan));
+});
+
+test('pelangganSetMember_ mengubah status Member', () => {
+  const found = ctx.findPelangganByPhone_('081234567890');
+  const updated = ctx.pelangganSetMember_({ token: ownerToken, id: found.ID, member: true }).pelanggan;
+  assert.strictEqual(updated.Member, true);
+});
+
+// --- Modul Users (kelola akun) ---
+test('usersList_ tidak pernah mengembalikan PasswordHash/PasswordSalt', () => {
+  const users = ctx.usersList_({ token: ownerToken }).users;
+  assert.ok(users.length > 0);
+  users.forEach((u) => {
+    assert.strictEqual(u.PasswordHash, undefined);
+    assert.strictEqual(u.PasswordSalt, undefined);
+  });
+});
+
+test('Owner bisa membuat akun Admin baru; username duplikat ditolak', () => {
+  const created = ctx.usersSave_({ token: ownerToken, nama: 'Admin Baru', username: 'admin1', role: 'Admin', password: 'admin12345' }).user;
+  assert.strictEqual(created.Role, 'Admin');
+  assertThrowsCode(() => ctx.usersSave_({ token: ownerToken, nama: 'Dup', username: 'admin1', role: 'Kasir', password: 'abcdef12' }), 'VALIDATION_ERROR');
+});
+
+test('Kasir dilarang mengelola user (kelolaUser = false)', () => {
+  assertThrowsCode(() => ctx.usersSave_({ token: kasirToken, nama: 'X', username: 'xx', role: 'Kasir', password: 'abcdef12' }), 'FORBIDDEN');
+});
+
+test('Update akun bisa reset password; login lama gagal, password baru berhasil', () => {
+  const admin = ctx.usersSave_({ token: ownerToken, nama: 'Admin Reset', username: 'adminreset', role: 'Admin', password: 'passwordLama1' }).user;
+  ctx.usersSave_({ token: ownerToken, id: admin.ID, nama: 'Admin Reset', username: 'adminreset', role: 'Admin', password: 'passwordBaru9' });
+  assertThrowsCode(() => ctx.authLogin_({ username: 'adminreset', password: 'passwordLama1' }), 'AUTH_INVALID');
+  const login = ctx.authLogin_({ username: 'adminreset', password: 'passwordBaru9' });
+  assert.ok(login.token);
+});
+
+// --- Owner Panel: edit/hapus/restore transaksi + backup/restore ---
+test('Owner bisa mengedit diskon & catatan transaksi; GrandTotal dihitung ulang', () => {
+  const list = ctx.barberListTransaksi_({ token: ownerToken, page: 1, pageSize: 1 }).transaksi;
+  const target = list[0];
+  const updated = ctx.ownerUpdateTransaksi_({ token: ownerToken, usaha: 'Barber', id: target.ID, diskon: 5000, catatan: 'Dikoreksi Owner' }).transaksi;
+  assert.strictEqual(updated.Diskon, 5000);
+  assert.strictEqual(updated.GrandTotal, ctx.round2_(updated.Subtotal - 5000));
+  assert.strictEqual(updated.Catatan, 'Dikoreksi Owner');
+});
+
+test('Admin dilarang menghapus transaksi (hapusTransaksi = false untuk Admin); Owner boleh', () => {
+  const salt = ctx.generateSalt_();
+  ctx.appendRowObject_(ctx.SHEETS.KASIR, {
+    ID: ctx.generateId_('USR'), Nama: 'Admin Test', Username: 'admintest', Role: 'Admin',
+    PasswordHash: ctx.hashPassword_('admin12345', salt), PasswordSalt: salt,
+    CapsterID: '', Status: 'Aktif', CreatedAt: new Date(), UpdatedAt: new Date()
+  });
+  const adminToken = ctx.authLogin_({ username: 'admintest', password: 'admin12345' }).token;
+
+  const list = ctx.barberListTransaksi_({ token: ownerToken, page: 1, pageSize: 1 }).transaksi;
+  const target = list[0];
+  assertThrowsCode(() => ctx.ownerDeleteTransaksi_({ token: adminToken, usaha: 'Barber', id: target.ID }), 'FORBIDDEN');
+
+  const deleted = ctx.ownerDeleteTransaksi_({ token: ownerToken, usaha: 'Barber', id: target.ID }).transaksi;
+  assert.strictEqual(deleted.IsDeleted, true);
+
+  const afterDelete = ctx.barberListTransaksi_({ token: ownerToken, page: 1, pageSize: 50 }).transaksi;
+  assert.ok(!afterDelete.some((t) => t.ID === target.ID), 'transaksi terhapus tidak boleh muncul di riwayat normal');
+
+  const restored = ctx.ownerRestoreTransaksi_({ token: ownerToken, usaha: 'Barber', id: target.ID }).transaksi;
+  assert.strictEqual(restored.IsDeleted, false);
+  const afterRestore = ctx.barberListTransaksi_({ token: ownerToken, page: 1, pageSize: 50 }).transaksi;
+  assert.ok(afterRestore.some((t) => t.ID === target.ID), 'transaksi yang di-restore harus muncul lagi');
+});
+
+test('ownerListTransaksi_ menampilkan transaksi termasuk yang terhapus (untuk keperluan restore)', () => {
+  const list = ctx.barberListTransaksi_({ token: ownerToken, page: 1, pageSize: 1 }).transaksi;
+  const target = list[0];
+  ctx.ownerDeleteTransaksi_({ token: ownerToken, usaha: 'Barber', id: target.ID });
+  const all = ctx.ownerListTransaksi_({ token: ownerToken, usaha: 'Barber', pageSize: 100 }).transaksi;
+  assert.ok(all.some((t) => t.ID === target.ID && t.IsDeleted === true));
+  ctx.ownerRestoreTransaksi_({ token: ownerToken, usaha: 'Barber', id: target.ID });
+});
+
+test('Backup mengembalikan seluruh sheet tanpa kredensial password', () => {
+  const backup = ctx.ownerBackupData_({ token: ownerToken }).backup;
+  assert.ok(backup.sheets[ctx.SHEETS.TRANSAKSI_BARBER].length > 0);
+  backup.sheets[ctx.SHEETS.KASIR].forEach((u) => {
+    assert.strictEqual(u.PasswordHash, undefined);
+  });
+});
+
+test('Restore database menolak tanpa confirm=true, dan tidak pernah menimpa sheet Kasir', () => {
+  const backup = ctx.ownerBackupData_({ token: ownerToken }).backup;
+  assertThrowsCode(() => ctx.ownerRestoreData_({ token: ownerToken, backup }), 'VALIDATION_ERROR');
+
+  const kasirCountBefore = ctx.getSheetData_(ctx.SHEETS.KASIR).rows.length;
+  const settingsBefore = ctx.getSheetData_(ctx.SHEETS.SETTINGS).rows.length;
+  const result = ctx.ownerRestoreData_({ token: ownerToken, backup, confirm: true });
+  assert.ok(result.restored.indexOf(ctx.SHEETS.KASIR) === -1, 'Kasir tidak boleh ada di daftar sheet yang di-restore');
+  assert.strictEqual(ctx.getSheetData_(ctx.SHEETS.KASIR).rows.length, kasirCountBefore, 'jumlah akun tidak boleh berubah oleh restore');
+  assert.strictEqual(ctx.getSheetData_(ctx.SHEETS.SETTINGS).rows.length, settingsBefore);
+});
+
+test('Kasir dilarang backup/restore database (backupRestore = false)', () => {
+  assertThrowsCode(() => ctx.ownerBackupData_({ token: kasirToken }), 'FORBIDDEN');
 });
 
 // --- Utils ---

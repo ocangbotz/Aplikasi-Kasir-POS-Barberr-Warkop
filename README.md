@@ -14,13 +14,13 @@ berikutnya (lihat `docs/`).
 
 | Fase | Cakupan | Status |
 |---|---|---|
-| 1 | Project scaffold, backend Apps Script, skema 15-sheet database | ✅ Selesai |
+| 1 | Project scaffold, backend Apps Script, skema 16-sheet database | ✅ Selesai |
 | 2 | Frontend foundation (shell, auth, routing, dark mode) | ✅ Selesai |
 | 3 | Modul Barber (transaksi, layanan, capster, struk) | ✅ Selesai |
 | 4 | Modul Warkop (menu, pesanan, split bill, struk) | ✅ Selesai |
 | 5 | Inventory Barber & Warkop + notifikasi stok | ✅ Selesai |
 | 6 | Dashboard Gabungan/Barber/Warkop + grafik + filter (+ Pengeluaran) | ✅ Selesai |
-| 7 | Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel | ⏳ |
+| 7 | Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel | ✅ Selesai |
 | 8 | Laporan + export (PDF/Excel/CSV/Print) | ⏳ |
 | 9 | PWA (manifest, service worker, offline, install) | ⏳ |
 | 10 | Optimasi performa & testing menyeluruh | ⏳ |
@@ -44,17 +44,19 @@ docs/             Panduan instalasi & deployment per fase
 4. **Modul Warkop** → lihat [`docs/04-MODUL-WARKOP.md`](docs/04-MODUL-WARKOP.md)
 5. **Inventory** → lihat [`docs/05-INVENTORY.md`](docs/05-INVENTORY.md)
 6. **Dashboard & Pengeluaran** → lihat [`docs/06-DASHBOARD.md`](docs/06-DASHBOARD.md)
-7. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
+7. **Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel** → lihat [`docs/07-CLOSING-SHIFT-GAJI-PELANGGAN-OWNER.md`](docs/07-CLOSING-SHIFT-GAJI-PELANGGAN-OWNER.md)
+8. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
 
 ## Menjalankan Test
 
 ```bash
 npm install
-npm run test:backend        # unit test logika backend (mock GAS runtime)
-npm run build:css           # build Tailwind sebelum test:e2e
-npm run test:e2e            # e2e shell aplikasi (auth, tema, dll) di Chromium
-npm run test:e2e:barber     # e2e Modul Barber (POS, layanan, capster, struk)
-npm run test:e2e:warkop     # e2e Modul Warkop (POS, menu, split bill, struk)
-npm run test:e2e:inventory  # e2e Inventory + notifikasi stok
-npm run test:e2e:dashboard  # e2e Dashboard + filter + Chart.js
+npm run test:backend         # unit test logika backend (mock GAS runtime)
+npm run build:css            # build Tailwind sebelum test:e2e
+npm run test:e2e             # e2e shell aplikasi (auth, tema, dll) di Chromium
+npm run test:e2e:barber      # e2e Modul Barber (POS, layanan, capster, struk)
+npm run test:e2e:warkop      # e2e Modul Warkop (POS, menu, split bill, struk)
+npm run test:e2e:inventory   # e2e Inventory + notifikasi stok
+npm run test:e2e:dashboard   # e2e Dashboard + filter + Chart.js
+npm run test:e2e:owner-panel # e2e Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel
 ```

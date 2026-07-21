@@ -29,6 +29,7 @@ var SHEETS = {
   INVENTORY_BARBER: 'Inventory Barber',
   INVENTORY_WARKOP: 'Inventory Warkop',
   CLOSING_SHIFT: 'Closing Shift',
+  GAJI_CAPSTER: 'Gaji Capster',
   AUDIT_LOG: 'Audit Log',
   SETTINGS: 'Settings'
 };
@@ -81,6 +82,11 @@ var METODE_BAYAR = {
 var STATUS_TRANSAKSI = {
   SELESAI: 'Selesai',
   DIBATALKAN: 'Dibatalkan'
+};
+
+var SHIFT_STATUS = {
+  TERBUKA: 'Terbuka',
+  DITUTUP: 'Ditutup'
 };
 
 var KATEGORI_PENGELUARAN = [

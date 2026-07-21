@@ -73,6 +73,20 @@ async function main() {
     await page.waitForSelector('#chart-pendapatan', { timeout: 5000 });
     ok('Login mengarahkan langsung ke Dashboard Gabungan (rute "/")');
 
+    // Regresi: login() sempat memicu DUA render rute '/' yang bersamaan
+    // (authStore subscription + navigate('/') eksplisit di login.js), membuat
+    // Chart.js gagal ("Canvas is already in use") dan menampilkan toast error
+    // yang tidak diuji oleh skenario manapun. Pastikan tidak ada toast error
+    // muncul tak lama setelah landing di dashboard.
+    await page.waitForTimeout(500);
+    const strayToastTexts = await page.locator('#toast-container div').allInnerTexts();
+    if (strayToastTexts.length === 0) ok('Tidak ada toast error tak terduga segera setelah login mendarat di dashboard');
+    else bad('Toast tak terduga muncul setelah login: ' + JSON.stringify(strayToastTexts));
+
+    const chartCanvasCount = await page.locator('#chart-pendapatan').count();
+    if (chartCanvasCount === 1) ok('Hanya ada satu instance canvas grafik pendapatan (tidak ada render rute ganda)');
+    else bad('Jumlah canvas #chart-pendapatan tidak sesuai: ' + chartCanvasCount);
+
     // --- Seed: layanan + capster + 1 transaksi barber Rp30.000 Cash ---
     await page.evaluate(() => { location.hash = '#/barber/layanan'; });
     await page.waitForSelector('#layanan-form', { timeout: 5000 });
