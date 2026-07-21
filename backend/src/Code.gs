@@ -1,0 +1,64 @@
+/**
+ * Code.gs
+ * Entry point Web App. Semua request masuk lewat doPost (JSON body:
+ * { action, token, ...payload }) dan diteruskan ke ROUTES[action].
+ *
+ * Kenapa satu endpoint saja? Google Apps Script Web App hanya expose satu
+ * URL; memisah per-resource lewat query "action" jauh lebih simpel daripada
+ * mengelola banyak deployment/URL.
+ *
+ * Frontend WAJIB mengirim body sebagai text/plain (bukan application/json)
+ * agar browser tidak melakukan CORS preflight (OPTIONS) -- Apps Script tidak
+ * bisa merespon preflight dengan benar.
+ */
+
+var ROUTES = {
+  ping: function () { return { pong: true, time: new Date().toISOString(), version: APP_CONFIG.VERSION }; },
+
+  login: function (p) { return authLogin_(p); },
+  logout: function (p) { return authLogout_(p); },
+  getMe: function (p) { return authGetMe_(p); },
+
+  auditLogList: function (p) { return auditLogList_(p); }
+};
+
+function doGet(e) {
+  return handleRequest_(e, 'GET');
+}
+
+function doPost(e) {
+  return handleRequest_(e, 'POST');
+}
+
+function handleRequest_(e, method) {
+  try {
+    var body = parseRequestBody_(e, method);
+    var action = body.action;
+    if (!action) throw new AppError_('BAD_REQUEST', 'Parameter "action" wajib diisi.');
+    var handler = ROUTES[action];
+    if (!handler) throw new AppError_('NOT_FOUND', 'Action "' + action + '" tidak dikenal.');
+    var result = handler(body);
+    return successResponse_(result);
+  } catch (err) {
+    logErrorSafe_(err);
+    return errorResponse_(err);
+  }
+}
+
+function parseRequestBody_(e, method) {
+  if (method === 'POST' && e.postData && e.postData.contents) {
+    try {
+      return JSON.parse(e.postData.contents);
+    } catch (parseErr) {
+      throw new AppError_('BAD_REQUEST', 'Body request bukan JSON yang valid.');
+    }
+  }
+  // Fallback GET (query string) -- dipakai untuk ping/testing manual.
+  return e.parameter || {};
+}
+
+function logErrorSafe_(err) {
+  try {
+    console.error((err && err.stack) || err);
+  } catch (ignored) { /* Logger tidak tersedia di beberapa konteks eksekusi */ }
+}
