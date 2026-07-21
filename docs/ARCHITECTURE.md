@@ -329,3 +329,58 @@ pengeluaran+foto nota → RBAC) DAN verifikasi browser Playwright penuh
 (isi form transaksi sungguhan, live preview subtotal/diskon/kembalian,
 struk yang muncul benar, cetak ulang dari riwayat, toggle member pelanggan,
 upload foto nota, RBAC sidebar per role) — keduanya lulus sebelum commit.
+
+## 10. Modul Warkop (Fase 4)
+
+### Stok Produk Warkop
+Berbeda dari Barber (yang tidak punya konsep stok per layanan), transaksi
+Warkop **memvalidasi & memotong stok Produk Warkop otomatis** saat
+`transaksi.create`: tiap item dicek `Stok >= qty` sebelum transaksi
+disimpan (transaksi ditolak `VALIDATION_ERROR` kalau kurang, stok TIDAK
+ikut berkurang untuk transaksi yang gagal), lalu dipotong setelah baris
+transaksi berhasil ditulis. ` Produk.js` juga menyediakan `restockProdukWarkop`
+(tambah stok manual, terpisah dari pengurangan otomatis) dipakai halaman
+Menu. Ini murni stok "menu jadi" 1:1 — bukan resep/BOM bahan baku (lihat
+asumsi desain di §5); stok bahan baku ada di sheet `Inventory Warkop`
+(Fase 5).
+
+### Split Bill
+Berbeda dari "Split" pada Barber (yang hanya berarti 1 tagihan dibayar
+sebagian Cash + sebagian QRIS oleh 1 pembayar), Warkop mendukung **split
+bill sungguhan**: tagihan dibagi ke beberapa pembayar (`splitBillPayers:
+[{nama, metode, jumlah}]`), masing-masing dengan metode Cash/QRIS sendiri.
+Backend (`Warkop.js`) menjumlahkan seluruh `jumlah` per metode menjadi
+`cashAmount`/`qrisAmount` agregat, lalu tetap divalidasi lewat
+`Calc.computePaymentBreakdown('Split', ...)` yang sama (total harus persis
+sama dengan grand total) — jadi tidak ada jalur validasi terpisah, hanya
+cara menyusun input yang berbeda. Detail per-pembayar disimpan di kolom
+`SplitBillJSON` dan ditampilkan di struk. Frontend (`warkop/transaksi.js`)
+punya tombol **"Bagi Rata"** yang otomatis membagi grand total rata ke
+semua pembayar yang sudah ditambahkan (sisa pembulatan masuk ke pembayar
+terakhir supaya totalnya selalu tepat).
+
+### Margin menu
+`Produk.js` menghitung `Margin = HargaJual - Modal` otomatis setiap kali
+salah satu dari keduanya diubah (create maupun update) — bukan field yang
+diinput manual, supaya tidak pernah tidak-sinkron.
+
+### Reuse dari Fase 3
+Modul Warkop TIDAK menduplikasi kode: kalkulasi (`Calc.js`), struk
+(`receipt.js`), dan pengeluaran (`Pengeluaran.js`/`expenses/index.js`)
+adalah kode yang SAMA dipakai Barber, hanya dibedakan lewat parameter
+`jenisUsaha`. Halaman Warkop tidak butuh pelanggan/loyalti (spesifikasi
+tidak memintanya untuk Warkop) — field `namaPelanggan` di Warkop hanya
+teks bebas (mis. nomor meja), bukan entitas Pelanggan seperti di Barber.
+
+### Testing Fase 4
+Unit test murni: `validateTransaksiWarkopPayload_`
+(`tests/backend/warkop.test.js`). Simulasi backend end-to-end menambahkan
+skenario: buat menu (margin otomatis), RBAC produk.manage vs produk.list,
+transaksi dgn potong stok otomatis, transaksi ditolak+stok tidak berubah
+saat stok kurang, split bill (agregasi & validasi total match), split
+bill yang totalnya salah ditolak, diskon, serta transaksi/pengeluaran
+Warkop terbukti terpisah dari Barber (sheet berbeda). Verifikasi browser
+Playwright penuh: buat menu, pesanan dgn QRIS pas, stok berkurang di
+tabel Menu, split bill 2 pembayar pakai tombol "Bagi Rata", struk
+menampilkan rincian tiap pembayar, riwayat menampilkan badge "Split Bill
+(2 org)", pengeluaran Warkop — semua lulus, nol error console.

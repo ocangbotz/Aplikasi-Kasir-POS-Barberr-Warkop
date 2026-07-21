@@ -24,6 +24,9 @@ import { renderPelangganBarber } from './modules/barber/pelanggan.js';
 import { renderLayananBarber } from './modules/barber/layanan.js';
 import { renderCapster } from './modules/barber/capster.js';
 import { renderPengeluaran } from './modules/expenses/index.js';
+import { renderTransaksiWarkop } from './modules/warkop/transaksi.js';
+import { renderRiwayatWarkop } from './modules/warkop/riwayat.js';
+import { renderMenuWarkop } from './modules/warkop/menu.js';
 
 const ALL_ROLES = ['Owner', 'Admin', 'Kasir', 'Capster'];
 
@@ -52,6 +55,12 @@ function registerRoutes() {
   registerRoute('/barber/layanan', { render: withShell(renderLayananBarber), roles: BARBER_ROLES, title: 'Layanan Barber' });
   registerRoute('/barber/capster', { render: withShell(renderCapster), roles: ['Owner', 'Admin'], title: 'Capster' });
   registerRoute('/barber/pengeluaran', { render: withShell((el) => renderPengeluaran(el, 'Barber')), roles: BARBER_ROLES, title: 'Pengeluaran Barber' });
+
+  const WARKOP_ROLES = ['Owner', 'Admin', 'Kasir'];
+  registerRoute('/warkop/transaksi', { render: withShell(renderTransaksiWarkop), roles: WARKOP_ROLES, title: 'Pesanan Baru - Warkop' });
+  registerRoute('/warkop/riwayat', { render: withShell(renderRiwayatWarkop), roles: WARKOP_ROLES, title: 'Riwayat Transaksi - Warkop' });
+  registerRoute('/warkop/menu', { render: withShell(renderMenuWarkop), roles: WARKOP_ROLES, title: 'Menu Warkop' });
+  registerRoute('/warkop/pengeluaran', { render: withShell((el) => renderPengeluaran(el, 'Warkop')), roles: WARKOP_ROLES, title: 'Pengeluaran Warkop' });
 }
 
 function renderNotFound(container) {

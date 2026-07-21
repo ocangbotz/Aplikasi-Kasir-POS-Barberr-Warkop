@@ -27,6 +27,15 @@ const NAV_ITEMS = [
       { path: '/barber/pengeluaran', label: 'Pengeluaran Barber', icon: '💸', roles: ['Owner', 'Admin', 'Kasir'] }
     ]
   },
+  {
+    group: 'Warkop', color: 'warkop',
+    items: [
+      { path: '/warkop/transaksi', label: 'Pesanan Baru', icon: '🧾', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/warkop/riwayat', label: 'Riwayat Transaksi', icon: '📋', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/warkop/menu', label: 'Menu', icon: '☕', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/warkop/pengeluaran', label: 'Pengeluaran Warkop', icon: '💸', roles: ['Owner', 'Admin', 'Kasir'] }
+    ]
+  },
   { path: '/settings', label: 'Pengaturan', icon: '⚙️', roles: null },
   { path: '/users', label: 'Manajemen User', icon: '👥', roles: ['Owner'] },
   { path: '/audit-log', label: 'Audit Log', icon: '📜', roles: ['Owner', 'Admin'] },

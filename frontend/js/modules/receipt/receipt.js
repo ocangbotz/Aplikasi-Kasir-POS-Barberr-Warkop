@@ -71,6 +71,12 @@ export async function showReceiptModal(transaksi, jenisUsaha) {
           ${transaksi.QrisAmount ? row('QRIS', formatRupiah(transaksi.QrisAmount)) : ''}
           ${transaksi.Kembalian ? row('Kembalian', formatRupiah(transaksi.Kembalian)) : ''}
           ${
+            Array.isArray(transaksi.SplitBillPayers) && transaksi.SplitBillPayers.length > 0
+              ? `<div class="my-1 text-[11px] text-slate-500">Rincian Split Bill:</div>` +
+                transaksi.SplitBillPayers.map((p) => row(`${escapeHtml(p.nama)} (${escapeHtml(p.metode)})`, formatRupiah(p.jumlah))).join('')
+              : ''
+          }
+          ${
             (transaksi.MetodeBayar === 'QRIS' || transaksi.MetodeBayar === 'Split') && settings.qrisStaticImageUrl
               ? `<div class="my-2 text-center"><img src="${escapeHtml(settings.qrisStaticImageUrl)}" class="mx-auto h-32 w-32 object-contain" alt="QRIS" /></div>`
               : ''

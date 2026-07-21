@@ -29,7 +29,12 @@ commit di tiap fase, lihat `docs/ARCHITECTURE.md` untuk detail):
       Barber + foto nota, struk siap cetak. 63 unit test lulus + simulasi
       backend end-to-end + verifikasi browser Playwright penuh (isi form
       sungguhan, live preview kalkulasi, cetak struk).
-- [ ] Fase 4 — Modul Warkop (menu, pesanan, split bill, struk)
+- [x] **Fase 4 — Modul Warkop**: menu (harga/modal/margin otomatis/stok),
+      pesanan multi-menu dengan potong stok otomatis + validasi stok
+      cukup, diskon, Cash/QRIS/Split, **split bill** sungguhan (bagi
+      tagihan ke beberapa pembayar dgn tombol "Bagi Rata"), pengeluaran
+      Warkop, struk (termasuk rincian split bill). 68 unit test lulus +
+      simulasi backend end-to-end + verifikasi browser Playwright penuh.
 - [ ] Fase 5 — Inventory Barber & Warkop
 - [ ] Fase 6 — Dashboard (Gabungan/Barber/Warkop) + filter + Chart.js
 - [ ] Fase 7 — Closing Shift + Gaji Capster

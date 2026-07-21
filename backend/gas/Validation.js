@@ -46,6 +46,7 @@ var ACTIONS = {
   LAYANAN_MANAGE: 'layanan.manage',
   CAPSTER_LIST: 'capster.list',
   CAPSTER_MANAGE: 'capster.manage',
+  PRODUK_LIST: 'produk.list',
   PRODUK_MANAGE: 'produk.manage',
   INVENTORY_MANAGE: 'inventory.manage',
   INVENTORY_VIEW: 'inventory.view',
@@ -113,6 +114,7 @@ function getRolePermissions() {
   P[ACTIONS.LAYANAN_MANAGE] = [R.OWNER];
   P[ACTIONS.CAPSTER_LIST] = [R.OWNER, R.ADMIN, R.KASIR];
   P[ACTIONS.CAPSTER_MANAGE] = [R.OWNER, R.ADMIN];
+  P[ACTIONS.PRODUK_LIST] = [R.OWNER, R.ADMIN, R.KASIR];
   P[ACTIONS.PRODUK_MANAGE] = [R.OWNER, R.ADMIN];
   P[ACTIONS.INVENTORY_MANAGE] = [R.OWNER, R.ADMIN];
   P[ACTIONS.INVENTORY_VIEW] = [R.OWNER, R.ADMIN, R.KASIR];
