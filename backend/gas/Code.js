@@ -124,6 +124,69 @@ function dispatchAction_(action, token, payload) {
       return getAuditLogPage(limit, offset);
     }
 
+    case ACTIONS.LAYANAN_LIST: {
+      requirePermission(token, action);
+      return listLayananBarber(!!payload.includeInactive);
+    }
+
+    case ACTIONS.LAYANAN_MANAGE: {
+      var layananActor = requirePermission(token, action);
+      if (payload.layananId) return updateLayananBarber(payload.layananId, payload, layananActor);
+      return createLayananBarber(payload, layananActor);
+    }
+
+    case ACTIONS.CAPSTER_LIST: {
+      requirePermission(token, action);
+      return listCapsters(!!payload.includeInactive);
+    }
+
+    case ACTIONS.CAPSTER_MANAGE: {
+      var capsterActor = requirePermission(token, action);
+      assertRequiredFields(payload, ['capsterId']);
+      return updateCapster(payload.capsterId, payload, capsterActor);
+    }
+
+    case ACTIONS.PELANGGAN_VIEW: {
+      requirePermission(token, action);
+      if (payload.query) return searchPelanggan(payload.query);
+      if (payload.pelangganId) return getPelangganDetail(payload.pelangganId);
+      return listPelanggan();
+    }
+
+    case ACTIONS.PELANGGAN_MANAGE: {
+      var pelangganActor = requirePermission(token, action);
+      assertRequiredFields(payload, ['pelangganId']);
+      return updatePelanggan(payload.pelangganId, payload, pelangganActor);
+    }
+
+    case ACTIONS.TRANSAKSI_CREATE: {
+      var trxCreateActor = requirePermission(token, action);
+      assertRequiredFields(payload, ['jenisUsaha']);
+      if (payload.jenisUsaha === JENIS_USAHA.BARBER) return createTransaksiBarber(payload, trxCreateActor);
+      throw createAppError('NOT_IMPLEMENTED', 'Transaksi jenis usaha "' + payload.jenisUsaha + '" belum didukung.');
+    }
+
+    case ACTIONS.TRANSAKSI_LIST: {
+      requirePermission(token, action);
+      assertRequiredFields(payload, ['jenisUsaha']);
+      if (payload.jenisUsaha === JENIS_USAHA.BARBER) {
+        if (payload.transaksiId) return getTransaksiBarberById(payload.transaksiId);
+        return listTransaksiBarber(payload);
+      }
+      throw createAppError('NOT_IMPLEMENTED', 'Transaksi jenis usaha "' + payload.jenisUsaha + '" belum didukung.');
+    }
+
+    case ACTIONS.PENGELUARAN_CREATE: {
+      var pengeluaranActor = requirePermission(token, action);
+      return createPengeluaran(payload, pengeluaranActor);
+    }
+
+    case ACTIONS.PENGELUARAN_VIEW: {
+      requirePermission(token, action);
+      assertRequiredFields(payload, ['jenisUsaha']);
+      return listPengeluaran(payload.jenisUsaha, payload);
+    }
+
     default:
       throw createAppError('UNKNOWN_ACTION', 'Aksi tidak dikenal: ' + action);
   }

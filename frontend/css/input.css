@@ -86,3 +86,24 @@
     scrollbar-width: thin;
   }
 }
+
+/*
+ * Cetak struk: sembunyikan seluruh halaman KECUALI #receipt-print-area.
+ * Teknik standar "print hanya elemen ini" karena ukuran kertas struk (mis.
+ * thermal 80mm) sangat berbeda dari layout layar biasa.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #receipt-print-area,
+  #receipt-print-area * {
+    visibility: visible;
+  }
+  #receipt-print-area {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 80mm;
+  }
+}

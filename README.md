@@ -22,11 +22,17 @@ commit di tiap fase, lihat `docs/ARCHITECTURE.md` untuk detail):
       audit log, backup/restore (fungsional, terhubung ke Fase 1), PWA
       (manifest, service worker, ikon), antrean offline. 50 unit test lulus
       + verifikasi end-to-end di browser sungguhan (Playwright).
-- [ ] Fase 3 — Dashboard (Gabungan/Barber/Warkop) + filter + Chart.js
-- [ ] Fase 4 — Modul Barber (transaksi, layanan, pelanggan, struk)
-- [ ] Fase 5 — Modul Warkop (menu, pesanan, split bill, struk)
-- [ ] Fase 6 — Inventory Barber & Warkop
-- [ ] Fase 7 — Pengeluaran, Closing Shift, Gaji Capster
+- [x] **Fase 3 — Modul Barber**: transaksi (multi-layanan, diskon,
+      Cash/QRIS/Split + kembalian), layanan (CRUD Owner), capster (bagi
+      hasil, disinkron otomatis dari Manajemen User), data pelanggan
+      (dedup by No HP, riwayat haircut, member, poin loyalti), pengeluaran
+      Barber + foto nota, struk siap cetak. 63 unit test lulus + simulasi
+      backend end-to-end + verifikasi browser Playwright penuh (isi form
+      sungguhan, live preview kalkulasi, cetak struk).
+- [ ] Fase 4 — Modul Warkop (menu, pesanan, split bill, struk)
+- [ ] Fase 5 — Inventory Barber & Warkop
+- [ ] Fase 6 — Dashboard (Gabungan/Barber/Warkop) + filter + Chart.js
+- [ ] Fase 7 — Closing Shift + Gaji Capster
 - [ ] Fase 8 — Laporan + Owner Panel
 - [ ] Fase 9 — PWA lanjutan + fitur bonus premium
 - [ ] Fase 10 — Optimasi & Testing menyeluruh

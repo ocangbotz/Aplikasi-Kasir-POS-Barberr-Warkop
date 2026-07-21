@@ -266,3 +266,66 @@ RBAC nav per role (Owner vs Kasir), akses langsung URL yang tidak diizinkan,
 dark mode toggle, CRUD user, backup, logout, dan tidak ada error console.
 Skrip verifikasi ini disimpan di luar repo (scratchpad sesi), sesuai
 keputusan untuk tidak menyimpan mock backend sebagai deliverable.
+
+## 9. Modul Barber (Fase 3)
+
+### Sinkronisasi Users -> Kasir/Capster
+Sheet `Kasir`/`Capster` (wajib dari spesifikasi) diisi **otomatis** setiap
+kali akun ber-role Kasir/Capster dibuat/diubah lewat Manajemen User
+(`Users.js` → `Kasir.js`/`Capster.js`). Owner cukup satu kali input di
+Manajemen User — tidak ada form input profil Kasir/Capster yang terpisah,
+supaya tidak ada duplikasi data (nama bisa beda antara sheet Users vs
+Kasir/Capster kalau diinput manual dua kali). Field yang HANYA ada di
+sheet Capster (mis. `PersentaseBagiHasil`) diberi default (40%) saat
+sinkronisasi pertama, dan bisa diubah lewat halaman **Capster**
+(`capster.manage`, Owner/Admin).
+
+### Kalkulasi transaksi (Calc.js)
+`backend/gas/Calc.js` (murni, diuji lewat Node) = satu-satunya sumber
+kebenaran untuk subtotal/diskon/split pembayaran/poin loyalti — dipakai
+`Barber.js` sekarang dan `Warkop.js` di Fase 4 supaya rumus tidak pernah
+berbeda antara dua jenis usaha. `frontend/js/core/calc.js` adalah **cermin**
+fungsi yang sama persis untuk preview instan di form (live subtotal/kembalian
+sebelum submit) — backend TETAP validasi ulang semuanya saat submit
+(client-side calc hanya UX, bukan sumber kebenaran).
+
+Aturan pembayaran (`computePaymentBreakdown`): Cash butuh `cashAmount >=
+grandTotal` (sisanya kembalian), QRIS butuh `qrisAmount === grandTotal`
+persis, Split butuh `cashAmount + qrisAmount === grandTotal` persis — kalau
+tidak sesuai, transaksi ditolak `VALIDATION_ERROR` sebelum tersimpan.
+
+### Nomor transaksi & pelanggan
+Nomor transaksi (`generateTransactionNumber`) urut per-hari per-jenis-usaha,
+dihitung dari `dbCountByField` (full-scan sheet transaksi hari itu — cukup
+untuk skala sekarang, lihat §6 soal optimasi lanjutan). Pelanggan
+di-dedup berdasarkan **NoHP** (`findOrCreatePelanggan`): transaksi baru
+dengan NoHP yang sudah ada memakai baris Pelanggan yang sama (kunjungan &
+poin loyalti terakumulasi), bukan membuat baris pelanggan baru.
+
+### Upload foto nota
+Frontend membaca file lewat `FileReader.readAsDataURL`, mengirim base64
+(tanpa prefix `data:...;base64,`) + mime type sebagai bagian payload
+`pengeluaran.create`. Backend (`Pengeluaran.js`) decode via
+`Utilities.base64Decode`, simpan sebagai file Drive di folder
+`POS Barber Warkop - Nota Pengeluaran/<JenisUsaha>/` (dibuat otomatis kalau
+belum ada), share `ANYONE_WITH_LINK` (VIEW), URL-nya disimpan di kolom
+`FotoNotaUrl`.
+
+### Struk (cetak)
+`frontend/js/modules/receipt/receipt.js` — modal generik dipakai Barber
+(Fase 3) & Warkop (Fase 4). Cetak pakai `window.print()` + teknik CSS
+"sembunyikan semua kecuali `#receipt-print-area`" (`input.css`, blok
+`@media print`) supaya hasil cetak hanya berisi struk (ukuran ~80mm),
+bukan seluruh halaman aplikasi.
+
+### Testing Fase 3
+Logika murni diuji lewat Node: `Calc.js` (subtotal/diskon/split/poin —
+`tests/backend/calc.test.js`), `Barber.js` validasi payload
+(`tests/backend/barber.test.js`), `frontend/js/core/calc.js` (cermin
+client-side — `tests/frontend/calc.test.js`). Verifikasi end-to-end:
+simulasi backend gabungan (skenario setup → user → layanan → transaksi
+dengan diskon persen & kembalian → pencarian/dedup pelanggan → riwayat →
+pengeluaran+foto nota → RBAC) DAN verifikasi browser Playwright penuh
+(isi form transaksi sungguhan, live preview subtotal/diskon/kembalian,
+struk yang muncul benar, cetak ulang dari riwayat, toggle member pelanggan,
+upload foto nota, RBAC sidebar per role) — keduanya lulus sebelum commit.

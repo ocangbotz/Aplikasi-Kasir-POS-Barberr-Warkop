@@ -6,6 +6,7 @@
 import { apiCall } from '../../core/api.js';
 import { getCurrentUser, hasRole } from '../../core/auth.js';
 import { showToast, escapeHtml } from '../../core/ui.js';
+import { invalidateSettingsCache } from '../../core/settings-cache.js';
 
 const EDITABLE_LABELS = {
   businessName: 'Nama Usaha',
@@ -66,6 +67,7 @@ export async function renderSettings(container) {
     submitBtn.disabled = true;
     try {
       await apiCall('settings.update', patch);
+      invalidateSettingsCache();
       showToast('Pengaturan berhasil disimpan', 'success');
     } catch (err) {
       showToast(err.message, 'error');

@@ -102,6 +102,20 @@ function dbFindByField(sheetName, fieldName, value) {
   return null;
 }
 
+/**
+ * Hitung baris yang cocok fieldName===value (dipakai mis. untuk menentukan
+ * urutan nomor transaksi harian). Full-scan — cukup untuk skala sekarang;
+ * dioptimasi (index/cache) di Fase 10 kalau data sudah sangat besar.
+ */
+function dbCountByField(sheetName, fieldName, value) {
+  var all = dbGetAll(sheetName, { includeDeleted: true });
+  var count = 0;
+  for (var i = 0; i < all.length; i++) {
+    if (all[i][fieldName] === value) count++;
+  }
+  return count;
+}
+
 /** Tambah baris baru. Mengunci script (LockService) agar aman dari race condition multi-kasir. */
 function dbAppend(sheetName, obj) {
   var lock = LockService.getScriptLock();

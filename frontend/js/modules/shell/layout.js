@@ -10,8 +10,23 @@ import { navigate } from '../../core/router.js';
 import { toggleTheme, escapeHtml } from '../../core/ui.js';
 import { APP_META } from '../../core/config.js';
 
+// Struktur nav: item lepas (tanpa group) tampil langsung; item dgn `group`
+// dikelompokkan di bawah judul berwarna (biru=Barber, oranye=Warkop,
+// hijau=Gabungan) sesuai konvensi warna di spesifikasi. Grup yang SEMUA
+// item-nya tidak boleh diakses role saat ini otomatis tidak ditampilkan.
 const NAV_ITEMS = [
   { path: '/', label: 'Beranda', icon: '🏠', roles: null },
+  {
+    group: 'Barber', color: 'barber',
+    items: [
+      { path: '/barber/transaksi', label: 'Transaksi Baru', icon: '🧾', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/barber/riwayat', label: 'Riwayat Transaksi', icon: '📋', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/barber/pelanggan', label: 'Data Pelanggan', icon: '🙍', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/barber/layanan', label: 'Layanan', icon: '💈', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/barber/capster', label: 'Capster', icon: '✂️', roles: ['Owner', 'Admin'] },
+      { path: '/barber/pengeluaran', label: 'Pengeluaran Barber', icon: '💸', roles: ['Owner', 'Admin', 'Kasir'] }
+    ]
+  },
   { path: '/settings', label: 'Pengaturan', icon: '⚙️', roles: null },
   { path: '/users', label: 'Manajemen User', icon: '👥', roles: ['Owner'] },
   { path: '/audit-log', label: 'Audit Log', icon: '📜', roles: ['Owner', 'Admin'] },
@@ -22,15 +37,37 @@ function currentPath() {
   return window.location.hash.slice(1) || '/';
 }
 
+function navLinkHtml(item) {
+  const active = currentPath() === item.path ? 'active' : '';
+  return `<a href="#${item.path}" class="nav-link ${active}" data-nav-link>
+    <span class="text-lg">${item.icon}</span><span>${item.label}</span>
+  </a>`;
+}
+
+// Kelas warna per grup HARUS ditulis literal lengkap (bukan dirakit lewat
+// template string seperti `text-${color}-600`) karena Tailwind men-scan kode
+// sumber sebagai teks biasa untuk memutuskan utility mana yang di-generate —
+// kelas yang hanya ada dalam bentuk ekspresi runtime tidak akan pernah masuk
+// ke app.css hasil build.
+const GROUP_COLOR_CLASSES = {
+  barber: 'text-barber-600 dark:text-barber-400',
+  warkop: 'text-warkop-600 dark:text-warkop-400',
+  gabungan: 'text-gabungan-600 dark:text-gabungan-400'
+};
+
 function navHtml(user) {
-  return NAV_ITEMS.filter((item) => !item.roles || hasRole(user, item.roles))
-    .map((item) => {
-      const active = currentPath() === item.path ? 'active' : '';
-      return `<a href="#${item.path}" class="nav-link ${active}" data-nav-link>
-        <span class="text-lg">${item.icon}</span><span>${item.label}</span>
-      </a>`;
-    })
-    .join('');
+  return NAV_ITEMS.map((entry) => {
+    if (!entry.group) {
+      if (entry.roles && !hasRole(user, entry.roles)) return '';
+      return navLinkHtml(entry);
+    }
+    const visibleItems = entry.items.filter((item) => !item.roles || hasRole(user, item.roles));
+    if (visibleItems.length === 0) return '';
+    return `
+      <div class="mt-3 px-3 text-xs font-semibold uppercase tracking-wide ${GROUP_COLOR_CLASSES[entry.color] || ''}">${entry.group}</div>
+      ${visibleItems.map(navLinkHtml).join('')}
+    `;
+  }).join('');
 }
 
 /**

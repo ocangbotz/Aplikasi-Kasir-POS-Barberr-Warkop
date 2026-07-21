@@ -1,8 +1,15 @@
 /**
  * Users.js — manajemen akun login (Owner only). GAS-only (memakai Db/Auth helpers).
- * Data profil operasional (Kasir/Capster) ada di sheet terpisah (Kasir.js/Capster
- * ditambahkan di Fase 4-7) — sheet Users murni untuk kredensial & role.
+ * Data profil operasional (Kasir/Capster) ada di sheet terpisah (Kasir.js/Capster.js)
+ * — sheet Users murni untuk kredensial & role. Setiap user dibuat/diubah dengan
+ * Role Kasir/Capster otomatis disinkron ke sheet profilnya masing-masing supaya
+ * Owner tidak perlu input data yang sama dua kali.
  */
+
+function syncRoleProfile_(user) {
+  if (user.Role === ROLES.KASIR) syncKasirProfileFromUser({ username: user.Username, fullName: user.FullName, aktif: user.Aktif });
+  if (user.Role === ROLES.CAPSTER) syncCapsterProfileFromUser({ username: user.Username, fullName: user.FullName, aktif: user.Aktif });
+}
 
 /** Jangan pernah kirim PasswordHash/PasswordSalt ke client. */
 function sanitizeUserForClient_(u) {
@@ -48,6 +55,7 @@ function createUser(payload, actor) {
     LastLoginAt: ''
   };
   dbAppend(SHEET.USERS, user);
+  syncRoleProfile_(user);
   logAudit({
     userId: actor.uid, userName: actor.name, role: actor.role,
     action: 'users.create', module: 'Users', targetId: user.UserID,
@@ -71,6 +79,7 @@ function updateUser(userId, patch, actor) {
   }
   var updated = dbUpdateById(SHEET.USERS, 'UserID', userId, allowed);
   if (!updated) throw createAppError('NOT_FOUND', 'User tidak ditemukan');
+  syncRoleProfile_(updated);
   logAudit({
     userId: actor.uid, userName: actor.name, role: actor.role,
     action: 'users.update', module: 'Users', targetId: userId,

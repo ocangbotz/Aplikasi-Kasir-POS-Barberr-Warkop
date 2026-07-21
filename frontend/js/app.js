@@ -18,6 +18,12 @@ import { renderSettings } from './modules/settings/index.js';
 import { renderUsers } from './modules/users/index.js';
 import { renderAuditLog } from './modules/auditlog/index.js';
 import { renderBackup } from './modules/backup/index.js';
+import { renderTransaksiBarber } from './modules/barber/transaksi.js';
+import { renderRiwayatBarber } from './modules/barber/riwayat.js';
+import { renderPelangganBarber } from './modules/barber/pelanggan.js';
+import { renderLayananBarber } from './modules/barber/layanan.js';
+import { renderCapster } from './modules/barber/capster.js';
+import { renderPengeluaran } from './modules/expenses/index.js';
 
 const ALL_ROLES = ['Owner', 'Admin', 'Kasir', 'Capster'];
 
@@ -38,6 +44,14 @@ function registerRoutes() {
   registerRoute('/users', { render: withShell(renderUsers), roles: ['Owner'], title: 'Manajemen User' });
   registerRoute('/audit-log', { render: withShell(renderAuditLog), roles: ['Owner', 'Admin'], title: 'Audit Log' });
   registerRoute('/backup', { render: withShell(renderBackup), roles: ['Owner'], title: 'Backup & Restore' });
+
+  const BARBER_ROLES = ['Owner', 'Admin', 'Kasir'];
+  registerRoute('/barber/transaksi', { render: withShell(renderTransaksiBarber), roles: BARBER_ROLES, title: 'Transaksi Baru - Barber' });
+  registerRoute('/barber/riwayat', { render: withShell(renderRiwayatBarber), roles: BARBER_ROLES, title: 'Riwayat Transaksi - Barber' });
+  registerRoute('/barber/pelanggan', { render: withShell(renderPelangganBarber), roles: BARBER_ROLES, title: 'Data Pelanggan - Barber' });
+  registerRoute('/barber/layanan', { render: withShell(renderLayananBarber), roles: BARBER_ROLES, title: 'Layanan Barber' });
+  registerRoute('/barber/capster', { render: withShell(renderCapster), roles: ['Owner', 'Admin'], title: 'Capster' });
+  registerRoute('/barber/pengeluaran', { render: withShell((el) => renderPengeluaran(el, 'Barber')), roles: BARBER_ROLES, title: 'Pengeluaran Barber' });
 }
 
 function renderNotFound(container) {
