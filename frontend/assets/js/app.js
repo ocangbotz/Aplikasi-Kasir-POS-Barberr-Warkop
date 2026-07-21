@@ -16,6 +16,9 @@ import { renderBarberTransaksi } from './pages/barber/transaksi.js';
 import { renderBarberRiwayat } from './pages/barber/riwayat.js';
 import { renderBarberLayanan } from './pages/barber/layanan.js';
 import { renderBarberCapster } from './pages/barber/capster.js';
+import { renderWarkopPesanan } from './pages/warkop/pesanan.js';
+import { renderWarkopRiwayat } from './pages/warkop/riwayat.js';
+import { renderWarkopProduk } from './pages/warkop/produk.js';
 
 registerRoute('/login', { public: true, title: 'Masuk', render: renderLogin });
 registerRoute('/', { title: 'Beranda', render: renderHome });
@@ -24,6 +27,10 @@ registerRoute('/barber/transaksi', { permission: 'transaksiBarber', title: 'Tran
 registerRoute('/barber/riwayat', { permission: 'transaksiBarber', title: 'Riwayat Barber', render: renderBarberRiwayat });
 registerRoute('/barber/layanan', { permission: 'kelolaLayananProduk', title: 'Layanan Barber', render: renderBarberLayanan });
 registerRoute('/barber/capster', { permission: 'kelolaCapster', title: 'Data Capster', render: renderBarberCapster });
+
+registerRoute('/warkop/pesanan', { permission: 'transaksiWarkop', title: 'Pesanan Warkop', render: renderWarkopPesanan });
+registerRoute('/warkop/riwayat', { permission: 'transaksiWarkop', title: 'Riwayat Warkop', render: renderWarkopRiwayat });
+registerRoute('/warkop/produk', { permission: 'kelolaLayananProduk', title: 'Menu Warkop', render: renderWarkopProduk });
 registerRoute('/404', {
   public: true,
   title: 'Halaman Tidak Ditemukan',
@@ -51,6 +58,9 @@ registerNavItem({ path: '/barber/transaksi', label: 'Transaksi', icon: '💈', p
 registerNavItem({ path: '/barber/riwayat', label: 'Riwayat', icon: '🧾', permission: 'transaksiBarber', group: 'Barber' });
 registerNavItem({ path: '/barber/layanan', label: 'Layanan', icon: '✂️', permission: 'kelolaLayananProduk', group: 'Barber' });
 registerNavItem({ path: '/barber/capster', label: 'Capster', icon: '🧑‍🔧', permission: 'kelolaCapster', group: 'Barber' });
+registerNavItem({ path: '/warkop/pesanan', label: 'Pesanan', icon: '☕', permission: 'transaksiWarkop', group: 'Warkop' });
+registerNavItem({ path: '/warkop/riwayat', label: 'Riwayat', icon: '🧾', permission: 'transaksiWarkop', group: 'Warkop' });
+registerNavItem({ path: '/warkop/produk', label: 'Menu', icon: '📋', permission: 'kelolaLayananProduk', group: 'Warkop' });
 
 const appEl = document.getElementById('app');
 let currentShellMode = null; // 'guest' | 'app'

@@ -9,7 +9,8 @@
     "watch:css": "tailwindcss -i frontend/src/css/input.css -o frontend/assets/css/app.css --watch",
     "dev:server": "node backend/test/devServer.js",
     "test:e2e": "node backend/test/e2e/run.js",
-    "test:e2e:barber": "node backend/test/e2e/barber.js"
+    "test:e2e:barber": "node backend/test/e2e/barber.js",
+    "test:e2e:warkop": "node backend/test/e2e/warkop.js"
   },
   "license": "MIT",
   "devDependencies": {

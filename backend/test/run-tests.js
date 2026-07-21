@@ -13,7 +13,7 @@ const { createMockGas } = require('./mockGas');
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const FILES_IN_ORDER = [
   'Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Pelanggan.gs', 'Settings.gs',
-  'Barber.gs', 'Code.gs', 'SetupDatabase.gs'
+  'Barber.gs', 'Warkop.gs', 'Code.gs', 'SetupDatabase.gs'
 ];
 
 function loadContext() {
@@ -311,6 +311,96 @@ test('Kasir dilarang mengubah settings, Owner boleh', () => {
   assertThrowsCode(() => ctx.updateSettings_({ token: kasirToken, values: { nama_usaha: 'Hack' } }), 'FORBIDDEN');
   const updated = ctx.updateSettings_({ token: ownerToken, values: { nama_usaha: 'Barbershop Jaya' } }).settings;
   assert.strictEqual(updated.nama_usaha, 'Barbershop Jaya');
+});
+
+// --- Modul Warkop ---
+let kopiHitam, indomieGoreng;
+
+test('Owner bisa membuat menu warkop baru; margin dihitung otomatis', () => {
+  kopiHitam = ctx.warkopSaveProduk_({ token: ownerToken, nama: 'Kopi Hitam', kategori: 'Minuman', modal: 3000, hargaJual: 8000, stok: 50, stokMinimum: 10 }).produk;
+  indomieGoreng = ctx.warkopSaveProduk_({ token: ownerToken, nama: 'Indomie Goreng', kategori: 'Makanan', modal: 4000, hargaJual: 10000, stok: 20, stokMinimum: 5 }).produk;
+  assert.strictEqual(kopiHitam.Margin, 5000);
+  assert.strictEqual(kopiHitam.Stok, 50);
+});
+
+test('Menu dengan harga jual <= 0 ditolak', () => {
+  assertThrowsCode(() => ctx.warkopSaveProduk_({ token: ownerToken, nama: 'Gratisan', kategori: 'X', hargaJual: 0 }), 'VALIDATION_ERROR');
+});
+
+test('Edit menu tanpa field stok tidak menimpa stok yang ada (mencegah reset stok tidak sengaja)', () => {
+  const updated = ctx.warkopSaveProduk_({ token: ownerToken, id: kopiHitam.ID, nama: 'Kopi Hitam', kategori: 'Minuman', modal: 3000, hargaJual: 8500 }).produk;
+  assert.strictEqual(updated.Stok, 50);
+  assert.strictEqual(updated.HargaJual, 8500);
+  kopiHitam = updated;
+});
+
+test('Kasir dilarang membuat/mengubah menu', () => {
+  assertThrowsCode(() => ctx.warkopSaveProduk_({ token: kasirToken, nama: 'X', kategori: 'X', hargaJual: 1000 }), 'FORBIDDEN');
+});
+
+test('Transaksi warkop menghitung subtotal dari beberapa item dengan qty & mengurangi stok', () => {
+  const result = ctx.warkopCreateTransaksi_({
+    token: kasirToken,
+    items: [
+      { produkId: kopiHitam.ID, qty: 2 },
+      { produkId: indomieGoreng.ID, qty: 1 }
+    ],
+    diskon: 1000,
+    metodePembayaran: 'Cash'
+  }).transaksi;
+
+  assert.strictEqual(result.Subtotal, 8500 * 2 + 10000);
+  assert.strictEqual(result.Diskon, 1000);
+  assert.strictEqual(result.GrandTotal, 8500 * 2 + 10000 - 1000);
+  assert.ok(result.NomorTransaksi.startsWith('WRK-'));
+  assert.strictEqual(result.Items.length, 2);
+
+  const kopiAfter = ctx.findRowById_(ctx.SHEETS.PRODUK_WARKOP, kopiHitam.ID);
+  const indomieAfter = ctx.findRowById_(ctx.SHEETS.PRODUK_WARKOP, indomieGoreng.ID);
+  assert.strictEqual(kopiAfter.Stok, 48);
+  assert.strictEqual(indomieAfter.Stok, 19);
+});
+
+test('Transaksi ditolak jika stok tidak cukup', () => {
+  assertThrowsCode(() => ctx.warkopCreateTransaksi_({
+    token: kasirToken, items: [{ produkId: indomieGoreng.ID, qty: 999 }], metodePembayaran: 'Cash'
+  }), 'VALIDATION_ERROR');
+});
+
+test('Split bill: total harus sama persis dengan grand total', () => {
+  assertThrowsCode(() => ctx.warkopCreateTransaksi_({
+    token: kasirToken,
+    items: [{ produkId: kopiHitam.ID, qty: 1 }],
+    splitBill: [{ metode: 'Cash', jumlah: 1000 }, { metode: 'QRIS', jumlah: 2000 }]
+  }), 'VALIDATION_ERROR');
+});
+
+test('Split bill valid: transaksi tersimpan dengan MetodePembayaran "Split" & rincian SplitBill', () => {
+  const result = ctx.warkopCreateTransaksi_({
+    token: kasirToken,
+    items: [{ produkId: kopiHitam.ID, qty: 2 }], // 8500*2 = 17000
+    splitBill: [{ metode: 'Cash', jumlah: 10000 }, { metode: 'QRIS', jumlah: 7000 }]
+  }).transaksi;
+  assert.strictEqual(result.MetodePembayaran, 'Split');
+  assert.strictEqual(result.SplitBill.length, 2);
+  assert.strictEqual(result.SplitBill[0].jumlah + result.SplitBill[1].jumlah, result.GrandTotal);
+});
+
+test('Transaksi warkop dengan nomor HP membuat/menambah statistik pelanggan seperti Barber', () => {
+  ctx.warkopCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Eka', noHp: '081299998888',
+    items: [{ produkId: indomieGoreng.ID, qty: 1 }], metodePembayaran: 'QRIS'
+  });
+  const found = ctx.findPelangganByPhone_('081299998888');
+  assert.ok(found);
+  assert.strictEqual(found.TotalKunjungan, 1);
+});
+
+test('warkopListTransaksi_ & warkopGetTransaksi_ bekerja dengan Items ter-parse', () => {
+  const list = ctx.warkopListTransaksi_({ token: kasirToken, page: 1, pageSize: 5 });
+  assert.ok(list.total >= 3);
+  const detail = ctx.warkopGetTransaksi_({ token: kasirToken, id: list.transaksi[0].ID }).transaksi;
+  assert.ok(Array.isArray(detail.Items));
 });
 
 // --- Utils ---

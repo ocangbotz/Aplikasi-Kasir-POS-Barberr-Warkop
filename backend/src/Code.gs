@@ -33,7 +33,13 @@ var ROUTES = {
   barberSaveCapster: function (p) { return barberSaveCapster_(p); },
   barberCreateTransaksi: function (p) { return barberCreateTransaksi_(p); },
   barberListTransaksi: function (p) { return barberListTransaksi_(p); },
-  barberGetTransaksi: function (p) { return barberGetTransaksi_(p); }
+  barberGetTransaksi: function (p) { return barberGetTransaksi_(p); },
+
+  warkopListProduk: function (p) { return warkopListProduk_(p); },
+  warkopSaveProduk: function (p) { return warkopSaveProduk_(p); },
+  warkopCreateTransaksi: function (p) { return warkopCreateTransaksi_(p); },
+  warkopListTransaksi: function (p) { return warkopListTransaksi_(p); },
+  warkopGetTransaksi: function (p) { return warkopGetTransaksi_(p); }
 };
 
 function doGet(e) {
