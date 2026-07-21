@@ -100,6 +100,22 @@ function createMockGas() {
         HH: pad(date.getHours()), mm: pad(date.getMinutes()), ss: pad(date.getSeconds())
       };
       return pattern.replace(/yyyy|MM|dd|HH|mm|ss/g, (m) => map[m]);
+    },
+    base64Decode: (str) => Array.from(Buffer.from(str, 'base64')),
+    newBlob: (bytes, mimeType, name) => ({ bytes, mimeType, name })
+  };
+
+  let driveFileSeq = 0;
+  const DriveApp = {
+    Access: { ANYONE_WITH_LINK: 'ANYONE_WITH_LINK' },
+    Permission: { VIEW: 'VIEW' },
+    createFile: (blob) => {
+      const id = 'mock-drive-file-' + (++driveFileSeq);
+      return {
+        getId: () => id,
+        getUrl: () => 'https://drive.google.com/file/d/' + id,
+        setSharing: () => {}
+      };
     }
   };
 
@@ -113,7 +129,7 @@ function createMockGas() {
     createTextOutput(content) { return new TextOutput().setContent(content); }
   };
 
-  return { SpreadsheetApp, PropertiesService, Utilities, ContentService, console };
+  return { SpreadsheetApp, PropertiesService, Utilities, ContentService, DriveApp, console };
 }
 
 module.exports = { createMockGas };

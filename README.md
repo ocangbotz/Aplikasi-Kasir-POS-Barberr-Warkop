@@ -19,8 +19,8 @@ berikutnya (lihat `docs/`).
 | 3 | Modul Barber (transaksi, layanan, capster, struk) | ✅ Selesai |
 | 4 | Modul Warkop (menu, pesanan, split bill, struk) | ✅ Selesai |
 | 5 | Inventory Barber & Warkop + notifikasi stok | ✅ Selesai |
-| 6 | Dashboard Gabungan/Barber/Warkop + grafik + filter | ⏳ |
-| 7 | Pengeluaran, Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel | ⏳ |
+| 6 | Dashboard Gabungan/Barber/Warkop + grafik + filter (+ Pengeluaran) | ✅ Selesai |
+| 7 | Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel | ⏳ |
 | 8 | Laporan + export (PDF/Excel/CSV/Print) | ⏳ |
 | 9 | PWA (manifest, service worker, offline, install) | ⏳ |
 | 10 | Optimasi performa & testing menyeluruh | ⏳ |
@@ -43,7 +43,8 @@ docs/             Panduan instalasi & deployment per fase
 3. **Modul Barber** → lihat [`docs/03-MODUL-BARBER.md`](docs/03-MODUL-BARBER.md)
 4. **Modul Warkop** → lihat [`docs/04-MODUL-WARKOP.md`](docs/04-MODUL-WARKOP.md)
 5. **Inventory** → lihat [`docs/05-INVENTORY.md`](docs/05-INVENTORY.md)
-6. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
+6. **Dashboard & Pengeluaran** → lihat [`docs/06-DASHBOARD.md`](docs/06-DASHBOARD.md)
+7. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
 
 ## Menjalankan Test
 
@@ -55,4 +56,5 @@ npm run test:e2e            # e2e shell aplikasi (auth, tema, dll) di Chromium
 npm run test:e2e:barber     # e2e Modul Barber (POS, layanan, capster, struk)
 npm run test:e2e:warkop     # e2e Modul Warkop (POS, menu, split bill, struk)
 npm run test:e2e:inventory  # e2e Inventory + notifikasi stok
+npm run test:e2e:dashboard  # e2e Dashboard + filter + Chart.js
 ```

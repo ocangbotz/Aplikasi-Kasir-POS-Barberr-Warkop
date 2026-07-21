@@ -50,6 +50,36 @@ function todayDateString_() {
   return formatDate_(new Date(), 'yyyy-MM-dd');
 }
 
+/** Geser tanggal (string yyyy-MM-dd) sejumlah hari (boleh negatif). */
+function shiftDateString_(dateStr, days) {
+  var d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return formatDate_(d, 'yyyy-MM-dd');
+}
+
+/** Senin di minggu yang sama dengan dateStr. */
+function startOfWeekString_(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  var day = d.getDay(); // 0=Minggu, 1=Senin, ...
+  var diffToMonday = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diffToMonday);
+  return formatDate_(d, 'yyyy-MM-dd');
+}
+
+function startOfMonthString_(dateStr) {
+  return dateStr.slice(0, 7) + '-01';
+}
+
+function startOfYearString_(dateStr) {
+  return dateStr.slice(0, 4) + '-01-01';
+}
+
+function daysBetweenDateStrings_(startStr, endStr) {
+  var a = new Date(startStr + 'T00:00:00');
+  var b = new Date(endStr + 'T00:00:00');
+  return Math.round((b - a) / 86400000);
+}
+
 function nowTimeString_() {
   return formatDate_(new Date(), 'HH:mm:ss');
 }

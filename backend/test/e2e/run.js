@@ -102,6 +102,10 @@ async function main() {
     if (darkAfterReload === darkAfter) ok('Preferensi tema konsisten setelah reload');
     else bad('Preferensi tema tidak persisten setelah reload');
 
+    await page.evaluate(() => { location.hash = '#/profil'; });
+    await page.waitForSelector('#change-password-form', { timeout: 5000 });
+    ok('Navigasi ke halaman Profil menampilkan form ganti password');
+
     await page.fill('input[name="oldPassword"]', 'password-salah-lagi');
     await page.fill('input[name="newPassword"]', 'passwordBaru123');
     await page.click('#change-password-submit');

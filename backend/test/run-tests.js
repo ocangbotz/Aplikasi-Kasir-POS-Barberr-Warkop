@@ -13,7 +13,7 @@ const { createMockGas } = require('./mockGas');
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const FILES_IN_ORDER = [
   'Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Pelanggan.gs', 'Settings.gs',
-  'Barber.gs', 'Warkop.gs', 'Inventory.gs', 'Code.gs', 'SetupDatabase.gs'
+  'Barber.gs', 'Warkop.gs', 'Inventory.gs', 'Pengeluaran.gs', 'Dashboard.gs', 'Code.gs', 'SetupDatabase.gs'
 ];
 
 function loadContext() {
@@ -452,6 +452,154 @@ test('inventoryLowStockSummary_ mendeteksi item Inventory & Produk Warkop yang s
   assert.ok(summary.inventoryWarkop.some((i) => i.ID === invKopiBubuk.ID), 'Kopi Bubuk (stok 3 <= minimum 5) harus terdeteksi');
   assert.ok(!summary.inventoryWarkop.some((i) => i.ID === invGula.ID), 'Gula Pasir (stok 25 > minimum 8) tidak boleh terdeteksi');
   assert.ok(summary.total >= 1);
+});
+
+// --- Modul Pengeluaran ---
+test('Kasir bisa mencatat pengeluaran Barber & Warkop dengan kategori valid', () => {
+  const p1 = ctx.pengeluaranCreate_({ token: kasirToken, usaha: 'Barber', nominal: 50000, kategori: 'Operasional', keterangan: 'Beli sabun', tanggal: ctx.todayDateString_() }).pengeluaran;
+  const p2 = ctx.pengeluaranCreate_({ token: kasirToken, usaha: 'Warkop', nominal: 30000, kategori: 'Belanja Stok', tanggal: ctx.todayDateString_() }).pengeluaran;
+  assert.ok(p1.ID);
+  assert.strictEqual(p2.Nominal, 30000);
+});
+
+test('Pengeluaran dengan nominal <= 0 atau kategori tidak dikenal ditolak', () => {
+  assertThrowsCode(() => ctx.pengeluaranCreate_({ token: kasirToken, usaha: 'Barber', nominal: 0, kategori: 'Operasional', tanggal: ctx.todayDateString_() }), 'VALIDATION_ERROR');
+  assertThrowsCode(() => ctx.pengeluaranCreate_({ token: kasirToken, usaha: 'Barber', nominal: 1000, kategori: 'Kategori Ngasal', tanggal: ctx.todayDateString_() }), 'VALIDATION_ERROR');
+});
+
+test('Capster dilarang mencatat pengeluaran (permission pengeluaran = false)', () => {
+  const salt = ctx.generateSalt_();
+  ctx.appendRowObject_(ctx.SHEETS.KASIR, {
+    ID: ctx.generateId_('USR'), Nama: 'Rizky Capster', Username: 'rizky', Role: 'Capster',
+    PasswordHash: ctx.hashPassword_('capster123', salt), PasswordSalt: salt,
+    CapsterID: '', Status: 'Aktif', CreatedAt: new Date(), UpdatedAt: new Date()
+  });
+  const capsterToken = ctx.authLogin_({ username: 'rizky', password: 'capster123' }).token;
+  assertThrowsCode(() => ctx.pengeluaranCreate_({ token: capsterToken, usaha: 'Barber', nominal: 1000, kategori: 'Operasional', tanggal: ctx.todayDateString_() }), 'FORBIDDEN');
+});
+
+test('Upload foto nota (base64) menghasilkan URL, tersimpan di FotoNotaURL', () => {
+  const tinyPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+  const p = ctx.pengeluaranCreate_({ token: kasirToken, usaha: 'Barber', nominal: 20000, kategori: 'Maintenance', tanggal: ctx.todayDateString_(), fotoNotaBase64: tinyPng }).pengeluaran;
+  assert.ok(p.FotoNotaURL.startsWith('https://drive.google.com/uc?id='));
+});
+
+test('pengeluaranList_ memfilter berdasarkan tanggal', () => {
+  const today = ctx.todayDateString_();
+  const result = ctx.pengeluaranList_({ token: kasirToken, usaha: 'Barber', startDate: today, endDate: today });
+  assert.ok(result.total >= 2);
+  assert.ok(result.pengeluaran.every((p) => p.Tanggal === today));
+});
+
+// --- Dashboard ---
+test('dashboardData_ Barber: hariIni & periodeMetrics (filter today) mencerminkan transaksi baru secara delta', () => {
+  const before = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+  const trx = ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Dashboard Test', noHp: '081200011122', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Cash'
+  }).transaksi;
+  const after = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+
+  assert.strictEqual(after.hariIni.pendapatan, ctx.round2_(before.hariIni.pendapatan + trx.GrandTotal));
+  assert.strictEqual(after.hariIni.transaksi, before.hariIni.transaksi + 1);
+  assert.strictEqual(after.hariIni.totalKepala, before.hariIni.totalKepala + 1);
+  assert.strictEqual(after.periodeMetrics.pendapatan, after.hariIni.pendapatan, 'filter today -> periodeMetrics harus sama dengan hariIni');
+  assert.strictEqual(after.hariIni.cash, ctx.round2_(before.hariIni.cash + trx.GrandTotal));
+});
+
+test('dashboardData_: Laba Bersih selalu = Pendapatan - Pengeluaran (Barber, Warkop, Gabungan)', () => {
+  ['Barber', 'Warkop', 'Gabungan'].forEach((usaha) => {
+    const data = ctx.dashboardData_({ token: ownerToken, usaha, filter: 'today' });
+    assert.strictEqual(data.hariIni.labaBersih, ctx.round2_(data.hariIni.pendapatan - data.hariIni.pengeluaran), 'usaha=' + usaha);
+    assert.strictEqual(data.bulanIni.labaBersih, ctx.round2_(data.bulanIni.pendapatan - data.bulanIni.pengeluaran), 'usaha=' + usaha);
+  });
+});
+
+test('dashboardData_ Gabungan hariIni = penjumlahan Barber + Warkop hariIni', () => {
+  const barber = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+  const warkop = ctx.dashboardData_({ token: ownerToken, usaha: 'Warkop', filter: 'today' });
+  const gabungan = ctx.dashboardData_({ token: ownerToken, usaha: 'Gabungan', filter: 'today' });
+  assert.strictEqual(gabungan.hariIni.pendapatan, ctx.round2_(barber.hariIni.pendapatan + warkop.hariIni.pendapatan));
+  assert.strictEqual(gabungan.hariIni.transaksi, barber.hariIni.transaksi + warkop.hariIni.transaksi);
+  assert.strictEqual(gabungan.hariIni.cash, ctx.round2_(barber.hariIni.cash + warkop.hariIni.cash));
+});
+
+test('dashboardData_: transaksi kemarin muncul di filter "yesterday" tapi tidak di "today"', () => {
+  const yesterday = ctx.shiftDateString_(ctx.todayDateString_(), -1);
+  const beforeYesterday = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'yesterday' });
+  const beforeToday = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+
+  const trx = ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Kemarin', noHp: '081200099988', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Cash', tanggal: yesterday
+  }).transaksi;
+
+  const afterYesterday = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'yesterday' });
+  const afterToday = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+
+  assert.strictEqual(afterYesterday.periodeMetrics.pendapatan, ctx.round2_(beforeYesterday.periodeMetrics.pendapatan + trx.GrandTotal));
+  assert.strictEqual(afterToday.periodeMetrics.pendapatan, beforeToday.periodeMetrics.pendapatan, 'transaksi kemarin tidak boleh masuk hitungan hari ini');
+  assert.strictEqual(afterToday.hariIni.pendapatan, beforeToday.hariIni.pendapatan);
+});
+
+test('dashboardData_ filter custom: rentang tanggal dihormati & validasi start<=end', () => {
+  const today = ctx.todayDateString_();
+  const weekAgo = ctx.shiftDateString_(today, -7);
+  const data = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'custom', startDate: weekAgo, endDate: today });
+  assert.strictEqual(data.periode.startDate, weekAgo);
+  assert.strictEqual(data.periode.endDate, today);
+
+  assertThrowsCode(() => ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'custom' }), 'VALIDATION_ERROR');
+  assertThrowsCode(() => ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'custom', startDate: today, endDate: weekAgo }), 'VALIDATION_ERROR');
+});
+
+test('Granularitas grafik otomatis: hour (1 hari), day (<=31 hari), month (>31 hari)', () => {
+  const today = ctx.todayDateString_();
+  const oneDay = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+  assert.strictEqual(oneDay.chartPendapatan.granularity, 'hour');
+  assert.strictEqual(oneDay.chartPendapatan.labels.length, 24);
+
+  const tenDays = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'custom', startDate: ctx.shiftDateString_(today, -10), endDate: today });
+  assert.strictEqual(tenDays.chartPendapatan.granularity, 'day');
+  assert.strictEqual(tenDays.chartPendapatan.labels.length, 11);
+
+  const sixtyDays = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'custom', startDate: ctx.shiftDateString_(today, -60), endDate: today });
+  assert.strictEqual(sixtyDays.chartPendapatan.granularity, 'month');
+});
+
+test('Capster Terlaris & Layanan Terlaris terurut benar berdasarkan pendapatan/jumlah', () => {
+  const capsterKedua = ctx.barberSaveCapster_({ token: ownerToken, nama: 'Dedi', persentaseBagiHasil: 40 }).capster;
+  // Budi dapat 1 transaksi besar (baru dibuat di atas + sebelumnya), Dedi dapat 1 transaksi kecil.
+  ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Untuk Dedi', noHp: '081200055566', capsterId: capsterKedua.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Cash'
+  });
+  const data = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+  assert.ok(data.capsterTerlaris.length >= 2);
+  assert.ok(data.capsterTerlaris[0].pendapatan >= data.capsterTerlaris[1].pendapatan, 'harus terurut desc berdasarkan pendapatan');
+  assert.ok(data.layananTerlaris.some((l) => l.nama === layananGunting.Nama));
+});
+
+test('Warkop: metodePembayaran menjumlahkan Split Bill ke Cash & QRIS dengan benar', () => {
+  const before = ctx.dashboardData_({ token: ownerToken, usaha: 'Warkop', filter: 'today' });
+  ctx.warkopCreateTransaksi_({
+    token: kasirToken,
+    items: [{ produkId: kopiHitam.ID, qty: 2 }],
+    splitBill: [{ metode: 'Cash', jumlah: 8000 }, { metode: 'QRIS', jumlah: 9000 }]
+  });
+  const after = ctx.dashboardData_({ token: ownerToken, usaha: 'Warkop', filter: 'today' });
+  assert.strictEqual(after.metodePembayaran.cash, ctx.round2_(before.metodePembayaran.cash + 8000));
+  assert.strictEqual(after.metodePembayaran.qris, ctx.round2_(before.metodePembayaran.qris + 9000));
+});
+
+test('Menu Terlaris & Kategori Terlaris Warkop dihitung dari qty terjual', () => {
+  const data = ctx.dashboardData_({ token: ownerToken, usaha: 'Warkop', filter: 'today' });
+  assert.ok(data.menuTerlaris.length > 0);
+  assert.ok(data.kategoriTerlaris.length > 0);
+  assert.ok(data.kategoriTerlaris.some((k) => k.kategori === 'Minuman'));
 });
 
 // --- Utils ---

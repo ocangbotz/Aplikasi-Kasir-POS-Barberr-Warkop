@@ -44,7 +44,12 @@ var ROUTES = {
   inventoryList: function (p) { return inventoryList_(p); },
   inventorySaveItem: function (p) { return inventorySaveItem_(p); },
   inventoryAdjustStock: function (p) { return inventoryAdjustStock_(p); },
-  inventoryLowStockSummary: function (p) { return inventoryLowStockSummary_(p); }
+  inventoryLowStockSummary: function (p) { return inventoryLowStockSummary_(p); },
+
+  pengeluaranCreate: function (p) { return pengeluaranCreate_(p); },
+  pengeluaranList: function (p) { return pengeluaranList_(p); },
+
+  dashboardData: function (p) { return dashboardData_(p); }
 };
 
 function doGet(e) {

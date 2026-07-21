@@ -96,7 +96,7 @@ export function renderLayout(root) {
               </div>
             </button>
             <div id="user-menu" class="glass-card absolute right-0 z-30 mt-2 hidden w-44 overflow-hidden p-1.5">
-              <a href="#/" data-nav-link data-path="/" class="nav-link !justify-start">👤 Profil Saya</a>
+              <a href="#/profil" data-nav-link data-path="/profil" class="nav-link !justify-start">👤 Profil Saya</a>
               <button id="logout-btn" type="button" class="nav-link w-full !justify-start text-red-600 dark:text-red-400">🚪 Keluar</button>
             </div>
           </div>
