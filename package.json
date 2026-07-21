@@ -4,7 +4,16 @@
   "private": true,
   "description": "Aplikasi Kasir (POS) untuk Barber & Warkop - HTML5, TailwindCSS, Vanilla JS, Google Apps Script + Google Sheets",
   "scripts": {
-    "test:backend": "node backend/test/run-tests.js"
+    "test:backend": "node backend/test/run-tests.js",
+    "build:css": "tailwindcss -i frontend/src/css/input.css -o frontend/assets/css/app.css --minify",
+    "watch:css": "tailwindcss -i frontend/src/css/input.css -o frontend/assets/css/app.css --watch",
+    "dev:server": "node backend/test/devServer.js",
+    "test:e2e": "node backend/test/e2e/run.js"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "playwright": "^1.61.1",
+    "tailwindcss": "^4.3.3"
+  }
 }

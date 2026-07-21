@@ -18,6 +18,7 @@ var ROUTES = {
   login: function (p) { return authLogin_(p); },
   logout: function (p) { return authLogout_(p); },
   getMe: function (p) { return authGetMe_(p); },
+  changePassword: function (p) { return authChangePassword_(p); },
 
   auditLogList: function (p) { return auditLogList_(p); }
 };

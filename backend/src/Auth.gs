@@ -107,3 +107,29 @@ function authGetMe_(payload) {
   if (!user) throw new AppError_('AUTH_REQUIRED', 'Akun tidak ditemukan.');
   return { user: publicUser_(user) };
 }
+
+function authChangePassword_(payload) {
+  var session = requireAuth_(payload.token);
+  requireFields_(payload, ['oldPassword', 'newPassword']);
+  if (String(payload.newPassword).length < 6) {
+    throw new AppError_('VALIDATION_ERROR', 'Password baru minimal 6 karakter.');
+  }
+
+  var user = findRowById_(SHEETS.KASIR, session.userId);
+  if (!user) throw new AppError_('AUTH_REQUIRED', 'Akun tidak ditemukan.');
+
+  var oldHash = hashPassword_(payload.oldPassword, user.PasswordSalt);
+  if (oldHash !== user.PasswordHash) {
+    throw new AppError_('AUTH_INVALID', 'Password lama tidak sesuai.');
+  }
+
+  var newSalt = generateSalt_();
+  var newHash = hashPassword_(payload.newPassword, newSalt);
+  user.PasswordHash = newHash;
+  user.PasswordSalt = newSalt;
+  user.UpdatedAt = new Date();
+  updateRowObject_(SHEETS.KASIR, user._rowIndex, user);
+
+  writeAuditLog_(session, 'CHANGE_PASSWORD', 'Auth', '', 'Password diganti oleh pemilik akun');
+  return { changed: true };
+}

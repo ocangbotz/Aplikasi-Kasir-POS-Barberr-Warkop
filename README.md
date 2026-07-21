@@ -15,7 +15,7 @@ berikutnya (lihat `docs/`).
 | Fase | Cakupan | Status |
 |---|---|---|
 | 1 | Project scaffold, backend Apps Script, skema 15-sheet database | ✅ Selesai |
-| 2 | Frontend foundation (shell, auth, routing, dark mode, PWA base) | ⏳ |
+| 2 | Frontend foundation (shell, auth, routing, dark mode) | ✅ Selesai |
 | 3 | Modul Barber (transaksi, layanan, capster, struk) | ⏳ |
 | 4 | Modul Warkop (menu, pesanan, split bill, struk) | ⏳ |
 | 5 | Inventory Barber & Warkop + notifikasi stok | ⏳ |
@@ -39,10 +39,14 @@ docs/             Panduan instalasi & deployment per fase
 ## Mulai dari Mana?
 
 1. **Backend & Database** → ikuti [`docs/01-SETUP-BACKEND.md`](docs/01-SETUP-BACKEND.md)
-2. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
+2. **Frontend** → ikuti [`docs/02-FRONTEND.md`](docs/02-FRONTEND.md)
+3. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
 
-## Menjalankan Test Backend
+## Menjalankan Test
 
 ```bash
-npm run test:backend
+npm install
+npm run test:backend   # unit test logika backend (mock GAS runtime)
+npm run build:css      # build Tailwind sebelum test:e2e
+npm run test:e2e       # end-to-end di Chromium sungguhan (Playwright)
 ```

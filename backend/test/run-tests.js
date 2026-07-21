@@ -155,6 +155,15 @@ test('doPost getMe mengembalikan user yang sedang login', () => {
   assert.strictEqual(body.data.user.username, 'owner');
 });
 
+test('changePassword: tolak password lama salah, terima jika benar & login pakai password baru', () => {
+  assertThrowsCode(() => ctx.authChangePassword_({ token: ownerToken, oldPassword: 'salah-banget', newPassword: 'passwordBaru123' }), 'AUTH_INVALID');
+  const result = ctx.authChangePassword_({ token: ownerToken, oldPassword: ownerCreds.password, newPassword: 'passwordBaru123' });
+  assert.strictEqual(result.changed, true);
+  const loginResult = ctx.authLogin_({ username: 'owner', password: 'passwordBaru123' });
+  assert.ok(loginResult.token);
+  assertThrowsCode(() => ctx.authLogin_({ username: 'owner', password: ownerCreds.password }), 'AUTH_INVALID');
+});
+
 // --- Utils ---
 test('generateId_ menghasilkan ID unik', () => {
   const ids = new Set();
