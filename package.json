@@ -1,0 +1,22 @@
+{
+  "name": "aplikasi-kasir-pos-barber-warkop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplikasi Kasir POS untuk Barber & Warkop — backend Google Apps Script + frontend PWA (HTML5/Tailwind/Vanilla JS).",
+  "scripts": {
+    "test": "node --test",
+    "test:backend": "node --test tests/backend/**/*.test.js",
+    "test:frontend": "node --test tests/frontend/**/*.test.js",
+    "build:css": "tailwindcss -i ./frontend/css/input.css -o ./frontend/css/app.css --minify",
+    "watch:css": "tailwindcss -i ./frontend/css/input.css -o ./frontend/css/app.css --watch",
+    "vendor:chartjs": "cp node_modules/chart.js/dist/chart.umd.min.js frontend/js/vendor/chart.umd.min.js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "playwright-core": "^1.61.1",
+    "tailwindcss": "^3.4.19"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1"
+  }
+}
