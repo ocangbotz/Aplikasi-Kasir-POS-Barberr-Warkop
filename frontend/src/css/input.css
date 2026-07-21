@@ -107,3 +107,17 @@
   }
 }
 
+/* Cetak Laporan: tabel penuh (bukan struk 80mm), lihat core/export.js printReport(). */
+@media print {
+  #laporan-print-area, #laporan-print-area * {
+    visibility: visible;
+  }
+  #laporan-print-area {
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    color: #000;
+  }
+}
+

@@ -21,7 +21,7 @@ const { createMockGas } = require('./mockGas');
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const FILES_IN_ORDER = [
   'Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Pelanggan.gs', 'Settings.gs',
-  'Barber.gs', 'Warkop.gs', 'Inventory.gs', 'Pengeluaran.gs', 'Dashboard.gs', 'Shift.gs', 'GajiCapster.gs', 'Users.gs', 'OwnerPanel.gs', 'Code.gs', 'SetupDatabase.gs'
+  'Barber.gs', 'Warkop.gs', 'Inventory.gs', 'Pengeluaran.gs', 'Dashboard.gs', 'Laporan.gs', 'Shift.gs', 'GajiCapster.gs', 'Users.gs', 'OwnerPanel.gs', 'Code.gs', 'SetupDatabase.gs'
 ];
 const FRONTEND_DIR = path.join(__dirname, '..', '..', 'frontend');
 

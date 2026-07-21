@@ -13,7 +13,7 @@ const { createMockGas } = require('./mockGas');
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const FILES_IN_ORDER = [
   'Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Pelanggan.gs', 'Settings.gs',
-  'Barber.gs', 'Warkop.gs', 'Inventory.gs', 'Pengeluaran.gs', 'Dashboard.gs', 'Shift.gs', 'GajiCapster.gs', 'Users.gs', 'OwnerPanel.gs', 'Code.gs', 'SetupDatabase.gs'
+  'Barber.gs', 'Warkop.gs', 'Inventory.gs', 'Pengeluaran.gs', 'Dashboard.gs', 'Laporan.gs', 'Shift.gs', 'GajiCapster.gs', 'Users.gs', 'OwnerPanel.gs', 'Code.gs', 'SetupDatabase.gs'
 ];
 
 function loadContext() {
@@ -804,6 +804,56 @@ test('Restore database menolak tanpa confirm=true, dan tidak pernah menimpa shee
 
 test('Kasir dilarang backup/restore database (backupRestore = false)', () => {
   assertThrowsCode(() => ctx.ownerBackupData_({ token: kasirToken }), 'FORBIDDEN');
+});
+
+// --- Modul Laporan ---
+test('laporanTransaksi_ menggabungkan Barber+Warkop, urut terbaru dulu, dan ringkasan cocok dengan dashboard', () => {
+  const today = ctx.todayDateString_();
+  const dash = ctx.dashboardData_({ token: ownerToken, usaha: 'Gabungan', filter: 'today' });
+  const laporan = ctx.laporanTransaksi_({ token: ownerToken, usaha: 'Gabungan', filter: 'today' });
+
+  assert.strictEqual(laporan.ringkasan.pendapatan, dash.hariIni.pendapatan, 'ringkasan Laporan harus konsisten dengan Dashboard');
+  assert.strictEqual(laporan.ringkasan.transaksi, dash.hariIni.transaksi);
+  assert.ok(laporan.transaksi.every((t) => t.tanggal === today));
+  assert.ok(laporan.transaksi.some((t) => t.usaha === 'Barber'));
+  assert.ok(laporan.transaksi.some((t) => t.usaha === 'Warkop'));
+  for (let i = 1; i < laporan.transaksi.length; i++) {
+    assert.ok(laporan.transaksi[i - 1].tanggal + laporan.transaksi[i - 1].jam >= laporan.transaksi[i].tanggal + laporan.transaksi[i].jam, 'harus terurut terbaru dulu');
+  }
+});
+
+test('laporanTransaksi_ dengan usaha=Barber hanya berisi baris Barber', () => {
+  const laporan = ctx.laporanTransaksi_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+  assert.ok(laporan.transaksi.length > 0);
+  assert.ok(laporan.transaksi.every((t) => t.usaha === 'Barber'));
+  assert.ok(laporan.transaksi[0].deskripsi.indexOf('Capster:') !== -1);
+});
+
+test('laporanPengeluaran_ menjumlahkan Barber+Warkop dan total sesuai isi baris', () => {
+  const laporan = ctx.laporanPengeluaran_({ token: ownerToken, usaha: 'Gabungan', filter: 'today' });
+  const expectedTotal = ctx.round2_(laporan.pengeluaran.reduce((s, p) => s + Number(p.Nominal), 0));
+  assert.strictEqual(laporan.total, expectedTotal);
+  assert.ok(laporan.pengeluaran.length > 0);
+});
+
+test('Capster dilarang mengakses Laporan (permission laporan = false)', () => {
+  const salt = ctx.generateSalt_();
+  ctx.appendRowObject_(ctx.SHEETS.KASIR, {
+    ID: ctx.generateId_('USR'), Nama: 'Capster Laporan Test', Username: 'capsterlaporan', Role: 'Capster',
+    PasswordHash: ctx.hashPassword_('capster123', salt), PasswordSalt: salt,
+    CapsterID: '', Status: 'Aktif', CreatedAt: new Date(), UpdatedAt: new Date()
+  });
+  const token = ctx.authLogin_({ username: 'capsterlaporan', password: 'capster123' }).token;
+  assertThrowsCode(() => ctx.laporanTransaksi_({ token, usaha: 'Barber', filter: 'today' }), 'FORBIDDEN');
+  assertThrowsCode(() => ctx.laporanPengeluaran_({ token, usaha: 'Barber', filter: 'today' }), 'FORBIDDEN');
+});
+
+test('laporanTransaksi_ menghormati filter custom rentang tanggal', () => {
+  const today = ctx.todayDateString_();
+  const weekAgo = ctx.shiftDateString_(today, -7);
+  const laporan = ctx.laporanTransaksi_({ token: ownerToken, usaha: 'Barber', filter: 'custom', startDate: weekAgo, endDate: today });
+  assert.strictEqual(laporan.periode.startDate, weekAgo);
+  assert.ok(laporan.transaksi.every((t) => t.tanggal >= weekAgo && t.tanggal <= today));
 });
 
 // --- Utils ---

@@ -26,6 +26,7 @@ import { renderPengeluaranWarkop } from './pages/pengeluaran/warkop.js';
 import { renderDashboardGabungan } from './pages/dashboard/gabungan.js';
 import { renderDashboardBarber } from './pages/dashboard/barber.js';
 import { renderDashboardWarkop } from './pages/dashboard/warkop.js';
+import { renderLaporan } from './pages/laporan/index.js';
 import { renderShift } from './pages/shift/index.js';
 import { renderGajiCapster } from './pages/gaji-capster/index.js';
 import { renderPelanggan } from './pages/pelanggan/index.js';
@@ -55,6 +56,7 @@ registerRoute('/inventory/warkop', { permission: 'inventory', title: 'Inventory 
 registerRoute('/pengeluaran/barber', { permission: 'pengeluaran', title: 'Pengeluaran Barber', render: renderPengeluaranBarber });
 registerRoute('/pengeluaran/warkop', { permission: 'pengeluaran', title: 'Pengeluaran Warkop', render: renderPengeluaranWarkop });
 
+registerRoute('/laporan', { permission: 'laporan', title: 'Laporan', render: renderLaporan });
 registerRoute('/shift', { permission: 'closingShift', title: 'Closing Shift', render: renderShift });
 registerRoute('/gaji-capster', { permission: 'gajiCapster', title: 'Gaji Capster', render: renderGajiCapster });
 registerRoute('/pelanggan', { permission: 'pelanggan', title: 'Data Pelanggan', render: renderPelanggan });
@@ -99,6 +101,7 @@ registerNavItem({ path: '/warkop/produk', label: 'Menu', icon: '📋', permissio
 registerNavItem({ path: '/pengeluaran/warkop', label: 'Pengeluaran', icon: '💸', permission: 'pengeluaran', group: 'Warkop' });
 registerNavItem({ path: '/inventory/barber', label: 'Inventory Barber', icon: '📦', permission: 'inventory', group: 'Inventory' });
 registerNavItem({ path: '/inventory/warkop', label: 'Inventory Warkop', icon: '📦', permission: 'inventory', group: 'Inventory' });
+registerNavItem({ path: '/laporan', label: 'Laporan', icon: '📊', permission: 'laporan', group: 'Operasional' });
 registerNavItem({ path: '/shift', label: 'Closing Shift', icon: '🧮', permission: 'closingShift', group: 'Operasional' });
 registerNavItem({ path: '/gaji-capster', label: 'Gaji Capster', icon: '💰', permission: 'gajiCapster', group: 'Operasional' });
 registerNavItem({ path: '/pelanggan', label: 'Pelanggan', icon: '👥', permission: 'pelanggan', group: 'Operasional' });

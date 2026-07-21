@@ -21,7 +21,7 @@ berikutnya (lihat `docs/`).
 | 5 | Inventory Barber & Warkop + notifikasi stok | ✅ Selesai |
 | 6 | Dashboard Gabungan/Barber/Warkop + grafik + filter (+ Pengeluaran) | ✅ Selesai |
 | 7 | Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel | ✅ Selesai |
-| 8 | Laporan + export (PDF/Excel/CSV/Print) | ⏳ |
+| 8 | Laporan + export (PDF/Excel/CSV/Print) | ✅ Selesai |
 | 9 | PWA (manifest, service worker, offline, install) | ⏳ |
 | 10 | Optimasi performa & testing menyeluruh | ⏳ |
 
@@ -45,7 +45,8 @@ docs/             Panduan instalasi & deployment per fase
 5. **Inventory** → lihat [`docs/05-INVENTORY.md`](docs/05-INVENTORY.md)
 6. **Dashboard & Pengeluaran** → lihat [`docs/06-DASHBOARD.md`](docs/06-DASHBOARD.md)
 7. **Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel** → lihat [`docs/07-CLOSING-SHIFT-GAJI-PELANGGAN-OWNER.md`](docs/07-CLOSING-SHIFT-GAJI-PELANGGAN-OWNER.md)
-8. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
+8. **Laporan + Export PDF/Excel/CSV/Print** → lihat [`docs/08-LAPORAN.md`](docs/08-LAPORAN.md)
+9. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
 
 ## Menjalankan Test
 
@@ -59,4 +60,5 @@ npm run test:e2e:warkop      # e2e Modul Warkop (POS, menu, split bill, struk)
 npm run test:e2e:inventory   # e2e Inventory + notifikasi stok
 npm run test:e2e:dashboard   # e2e Dashboard + filter + Chart.js
 npm run test:e2e:owner-panel # e2e Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel
+npm run test:e2e:laporan     # e2e Laporan + export PDF/Excel/CSV/Print
 ```

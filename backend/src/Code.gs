@@ -51,6 +51,9 @@ var ROUTES = {
 
   dashboardData: function (p) { return dashboardData_(p); },
 
+  laporanTransaksi: function (p) { return laporanTransaksi_(p); },
+  laporanPengeluaran: function (p) { return laporanPengeluaran_(p); },
+
   shiftGetCurrent: function (p) { return shiftGetCurrent_(p); },
   shiftOpen: function (p) { return shiftOpen_(p); },
   shiftClose: function (p) { return shiftClose_(p); },
