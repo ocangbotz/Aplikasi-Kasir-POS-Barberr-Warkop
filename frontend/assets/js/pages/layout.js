@@ -50,7 +50,7 @@ export function renderLayout(root) {
     <div class="min-h-screen lg:flex">
       <div id="sidebar-overlay" class="fixed inset-0 z-30 hidden bg-slate-900/40 lg:hidden"></div>
 
-      <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full transform border-r border-slate-200/70 bg-white/90 p-4 backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 lg:border-slate-200 dark:border-white/10 dark:bg-slate-900/90 lg:dark:bg-slate-950">
+      <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full transform overflow-y-auto overscroll-contain border-r border-slate-200/70 bg-white/90 p-4 backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 lg:border-slate-200 dark:border-white/10 dark:bg-slate-900/90 lg:dark:bg-slate-950">
         <div class="mb-6 flex items-center gap-2 px-2">
           <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-barber-500 to-warkop-500 text-white shadow">✂</div>
           <div>
