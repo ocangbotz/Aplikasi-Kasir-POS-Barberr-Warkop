@@ -158,6 +158,13 @@ kebetulan.
    Upload folder `frontend/` (statis, tidak perlu Node.js di server) ke
    hosting pilihan (GitHub Pages, Netlify, Cloudflare Pages, Firebase
    Hosting, dsb).
+
+   **GitHub Pages**: `.github/workflows/deploy-pages.yml` sudah disediakan --
+   otomatis menjalankan `build:css` + `build:sw` lalu publish `frontend/`
+   setiap push ke `main`. Aktifkan sekali di **Settings → Pages → Build and
+   deployment → Source: GitHub Actions**. Semua path aset di `index.html`
+   sudah relatif (`./assets/...`) sehingga aman dideploy di subpath repo
+   (`https://<user>.github.io/<repo>/`), tidak perlu di root domain.
 3. **HTTPS wajib**: Service Worker (install PWA, akses offline) hanya aktif
    di secure context (`https://` atau `localhost`). Semua hosting statis di
    atas menyediakan HTTPS otomatis secara default.
