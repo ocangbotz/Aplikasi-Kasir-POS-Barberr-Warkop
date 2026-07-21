@@ -19,6 +19,8 @@ import { renderBarberCapster } from './pages/barber/capster.js';
 import { renderWarkopPesanan } from './pages/warkop/pesanan.js';
 import { renderWarkopRiwayat } from './pages/warkop/riwayat.js';
 import { renderWarkopProduk } from './pages/warkop/produk.js';
+import { renderInventoryBarber } from './pages/inventory/barber.js';
+import { renderInventoryWarkop } from './pages/inventory/warkop.js';
 
 registerRoute('/login', { public: true, title: 'Masuk', render: renderLogin });
 registerRoute('/', { title: 'Beranda', render: renderHome });
@@ -31,6 +33,9 @@ registerRoute('/barber/capster', { permission: 'kelolaCapster', title: 'Data Cap
 registerRoute('/warkop/pesanan', { permission: 'transaksiWarkop', title: 'Pesanan Warkop', render: renderWarkopPesanan });
 registerRoute('/warkop/riwayat', { permission: 'transaksiWarkop', title: 'Riwayat Warkop', render: renderWarkopRiwayat });
 registerRoute('/warkop/produk', { permission: 'kelolaLayananProduk', title: 'Menu Warkop', render: renderWarkopProduk });
+
+registerRoute('/inventory/barber', { permission: 'inventory', title: 'Inventory Barber', render: renderInventoryBarber });
+registerRoute('/inventory/warkop', { permission: 'inventory', title: 'Inventory Warkop', render: renderInventoryWarkop });
 registerRoute('/404', {
   public: true,
   title: 'Halaman Tidak Ditemukan',
@@ -61,18 +66,25 @@ registerNavItem({ path: '/barber/capster', label: 'Capster', icon: '🧑‍🔧'
 registerNavItem({ path: '/warkop/pesanan', label: 'Pesanan', icon: '☕', permission: 'transaksiWarkop', group: 'Warkop' });
 registerNavItem({ path: '/warkop/riwayat', label: 'Riwayat', icon: '🧾', permission: 'transaksiWarkop', group: 'Warkop' });
 registerNavItem({ path: '/warkop/produk', label: 'Menu', icon: '📋', permission: 'kelolaLayananProduk', group: 'Warkop' });
+registerNavItem({ path: '/inventory/barber', label: 'Inventory Barber', icon: '📦', permission: 'inventory', group: 'Inventory' });
+registerNavItem({ path: '/inventory/warkop', label: 'Inventory Warkop', icon: '📦', permission: 'inventory', group: 'Inventory' });
 
 const appEl = document.getElementById('app');
 let currentShellMode = null; // 'guest' | 'app'
+let layoutCleanup = null;
 
 function mountShell() {
   const nextMode = isAuthenticated() ? 'app' : 'guest';
   if (nextMode === currentShellMode) return;
   currentShellMode = nextMode;
+
+  if (typeof layoutCleanup === 'function') layoutCleanup();
+  layoutCleanup = null;
   appEl.innerHTML = '';
 
   if (nextMode === 'app') {
-    const pageRoot = renderLayout(appEl);
+    const { pageRoot, cleanup } = renderLayout(appEl);
+    layoutCleanup = cleanup;
     initRouter(pageRoot);
   } else {
     initRouter(appEl);

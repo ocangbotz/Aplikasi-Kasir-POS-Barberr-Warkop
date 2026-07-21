@@ -10,7 +10,8 @@
     "dev:server": "node backend/test/devServer.js",
     "test:e2e": "node backend/test/e2e/run.js",
     "test:e2e:barber": "node backend/test/e2e/barber.js",
-    "test:e2e:warkop": "node backend/test/e2e/warkop.js"
+    "test:e2e:warkop": "node backend/test/e2e/warkop.js",
+    "test:e2e:inventory": "node backend/test/e2e/inventory.js"
   },
   "license": "MIT",
   "devDependencies": {

@@ -9,6 +9,9 @@ import { getNavItems } from '../core/nav.js';
 import { currentPath, navigate } from '../core/router.js';
 import { themeStore, toggleTheme } from '../core/theme.js';
 import { APP_CONFIG } from '../core/config.js';
+import { apiCall } from '../core/api.js';
+
+const NOTIF_REFRESH_MS = 60000;
 
 function navLinkHtml(item) {
   return `
@@ -70,6 +73,18 @@ export function renderLayout(root) {
             <span id="theme-icon" class="text-base">${themeIcon(themeStore.get())}</span>
           </button>
 
+          ${hasPermission('inventory') ? `
+          <div class="relative">
+            <button id="notif-bell" type="button" class="btn-ghost relative !px-2.5" title="Notifikasi stok">
+              <span class="text-base">🔔</span>
+              <span id="notif-badge" class="absolute -top-0.5 -right-0.5 hidden min-w-[16px] rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-4 text-white">0</span>
+            </button>
+            <div id="notif-panel" class="glass-card absolute right-0 z-30 mt-2 hidden w-72 overflow-hidden">
+              <p class="border-b border-slate-200/70 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-400 dark:border-white/10">Stok Hampir Habis</p>
+              <div id="notif-list" class="max-h-72 overflow-y-auto p-1.5 text-sm"></div>
+            </div>
+          </div>` : ''}
+
           <div class="relative">
             <button id="user-menu-btn" type="button" class="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-900/5 dark:hover:bg-white/10">
               <div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white dark:bg-white dark:text-slate-900">
@@ -92,8 +107,8 @@ export function renderLayout(root) {
     </div>
   `;
 
-  wireInteractions(root);
-  return root.querySelector('#page-content');
+  const cleanup = wireInteractions(root);
+  return { pageRoot: root.querySelector('#page-content'), cleanup };
 }
 
 function wireInteractions(root) {
@@ -149,4 +164,54 @@ function wireInteractions(root) {
   };
   updateActiveLink();
   window.addEventListener('hashchange', updateActiveLink);
+
+  const notifTimer = wireNotificationBell(root);
+  return () => { if (notifTimer) clearInterval(notifTimer); };
+}
+
+function notifRowHtml(label, items) {
+  if (items.length === 0) return '';
+  return `
+    <p class="mt-2 px-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 first:mt-0">${label}</p>
+    ${items.map((i) => `
+      <div class="flex items-center justify-between gap-2 rounded-lg px-1.5 py-1 hover:bg-slate-900/5 dark:hover:bg-white/10">
+        <span class="truncate">${i.NamaItem || i.Nama}</span>
+        <span class="text-xs font-semibold text-red-500">${i.Stok} ${i.Satuan || ''}</span>
+      </div>`).join('')}`;
+}
+
+/** Notifikasi stok hampir habis (Inventory Barber/Warkop + Produk Warkop). Hanya untuk role dengan izin 'inventory'. */
+function wireNotificationBell(root) {
+  const bell = root.querySelector('#notif-bell');
+  if (!bell) return null;
+
+  const badge = root.querySelector('#notif-badge');
+  const panel = root.querySelector('#notif-panel');
+  const list = root.querySelector('#notif-list');
+
+  async function refresh() {
+    try {
+      const summary = await apiCall('inventoryLowStockSummary', {});
+      badge.textContent = String(summary.total);
+      badge.classList.toggle('hidden', summary.total === 0);
+      list.innerHTML = [
+        notifRowHtml('Inventory Barber', summary.inventoryBarber),
+        notifRowHtml('Inventory Warkop', summary.inventoryWarkop),
+        notifRowHtml('Menu Warkop', summary.produkWarkop)
+      ].join('') || '<p class="p-3 text-center text-xs text-slate-400">Semua stok aman.</p>';
+    } catch {
+      // Diam-diam gagal (mis. offline) -- badge tetap menampilkan nilai terakhir yang diketahui.
+    }
+  }
+
+  bell.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const opening = panel.classList.contains('hidden');
+    panel.classList.toggle('hidden');
+    if (opening) refresh(); // data bisa berubah sejak refresh terakhir (mis. baru saja menyesuaikan stok)
+  });
+  document.addEventListener('click', () => panel.classList.add('hidden'));
+
+  refresh();
+  return setInterval(refresh, NOTIF_REFRESH_MS);
 }

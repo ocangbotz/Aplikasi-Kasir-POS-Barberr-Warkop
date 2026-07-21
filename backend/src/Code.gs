@@ -39,7 +39,12 @@ var ROUTES = {
   warkopSaveProduk: function (p) { return warkopSaveProduk_(p); },
   warkopCreateTransaksi: function (p) { return warkopCreateTransaksi_(p); },
   warkopListTransaksi: function (p) { return warkopListTransaksi_(p); },
-  warkopGetTransaksi: function (p) { return warkopGetTransaksi_(p); }
+  warkopGetTransaksi: function (p) { return warkopGetTransaksi_(p); },
+
+  inventoryList: function (p) { return inventoryList_(p); },
+  inventorySaveItem: function (p) { return inventorySaveItem_(p); },
+  inventoryAdjustStock: function (p) { return inventoryAdjustStock_(p); },
+  inventoryLowStockSummary: function (p) { return inventoryLowStockSummary_(p); }
 };
 
 function doGet(e) {

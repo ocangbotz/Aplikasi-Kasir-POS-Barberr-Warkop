@@ -13,7 +13,7 @@ const { createMockGas } = require('./mockGas');
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const FILES_IN_ORDER = [
   'Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Pelanggan.gs', 'Settings.gs',
-  'Barber.gs', 'Warkop.gs', 'Code.gs', 'SetupDatabase.gs'
+  'Barber.gs', 'Warkop.gs', 'Inventory.gs', 'Code.gs', 'SetupDatabase.gs'
 ];
 
 function loadContext() {
@@ -401,6 +401,57 @@ test('warkopListTransaksi_ & warkopGetTransaksi_ bekerja dengan Items ter-parse'
   assert.ok(list.total >= 3);
   const detail = ctx.warkopGetTransaksi_({ token: kasirToken, id: list.transaksi[0].ID }).transaksi;
   assert.ok(Array.isArray(detail.Items));
+});
+
+// --- Modul Inventory ---
+let invGula, invKopiBubuk;
+
+test('Owner bisa membuat item Inventory Warkop baru dengan stok awal', () => {
+  invGula = ctx.inventorySaveItem_({ token: ownerToken, usaha: 'Warkop', namaItem: 'Gula Pasir', kategori: 'Bahan Baku', satuan: 'kg', stok: 20, stokMinimum: 5, hargaBeli: 15000, supplier: 'Toko Sembako A' }).item;
+  invKopiBubuk = ctx.inventorySaveItem_({ token: ownerToken, usaha: 'Warkop', namaItem: 'Kopi Bubuk', kategori: 'Bahan Baku', satuan: 'kg', stok: 3, stokMinimum: 5 }).item;
+  assert.strictEqual(invGula.Stok, 20);
+});
+
+test('Inventory Barber & Warkop tersimpan di sheet terpisah', () => {
+  const invHanduk = ctx.inventorySaveItem_({ token: ownerToken, usaha: 'Barber', namaItem: 'Handuk', kategori: 'Perlengkapan', satuan: 'pcs', stok: 15, stokMinimum: 3 }).item;
+  const barberItems = ctx.inventoryList_({ token: ownerToken, usaha: 'Barber' }).items;
+  const warkopItems = ctx.inventoryList_({ token: ownerToken, usaha: 'Warkop' }).items;
+  assert.ok(barberItems.some((i) => i.ID === invHanduk.ID));
+  assert.ok(!warkopItems.some((i) => i.ID === invHanduk.ID));
+});
+
+test('Kasir dilarang mengakses inventory', () => {
+  assertThrowsCode(() => ctx.inventoryList_({ token: kasirToken, usaha: 'Warkop' }), 'FORBIDDEN');
+  assertThrowsCode(() => ctx.inventorySaveItem_({ token: kasirToken, usaha: 'Warkop', namaItem: 'X', satuan: 'pcs' }), 'FORBIDDEN');
+});
+
+test('Edit item inventory tidak mengubah stok (harus lewat inventoryAdjustStock_)', () => {
+  const updated = ctx.inventorySaveItem_({ token: ownerToken, id: invGula.ID, usaha: 'Warkop', namaItem: 'Gula Pasir', kategori: 'Bahan Baku', satuan: 'kg', stokMinimum: 8, hargaBeli: 16000 }).item;
+  assert.strictEqual(updated.Stok, 20);
+  assert.strictEqual(updated.StokMinimum, 8);
+  invGula = updated;
+});
+
+test('inventoryAdjustStock_ menambah & mengurangi stok dengan benar', () => {
+  const afterRestock = ctx.inventoryAdjustStock_({ token: ownerToken, usaha: 'Warkop', id: invGula.ID, delta: 10, alasan: 'Restock' }).item;
+  assert.strictEqual(afterRestock.Stok, 30);
+  const afterUsage = ctx.inventoryAdjustStock_({ token: ownerToken, usaha: 'Warkop', id: invGula.ID, delta: -5, alasan: 'Pemakaian' }).item;
+  assert.strictEqual(afterUsage.Stok, 25);
+});
+
+test('inventoryAdjustStock_ menolak stok menjadi negatif', () => {
+  assertThrowsCode(() => ctx.inventoryAdjustStock_({ token: ownerToken, usaha: 'Warkop', id: invKopiBubuk.ID, delta: -100, alasan: 'Pemakaian' }), 'VALIDATION_ERROR');
+});
+
+test('inventoryAdjustStock_ menolak alasan yang tidak dikenal', () => {
+  assertThrowsCode(() => ctx.inventoryAdjustStock_({ token: ownerToken, usaha: 'Warkop', id: invGula.ID, delta: 1, alasan: 'Alasan Aneh' }), 'VALIDATION_ERROR');
+});
+
+test('inventoryLowStockSummary_ mendeteksi item Inventory & Produk Warkop yang stoknya <= minimum', () => {
+  const summary = ctx.inventoryLowStockSummary_({ token: ownerToken });
+  assert.ok(summary.inventoryWarkop.some((i) => i.ID === invKopiBubuk.ID), 'Kopi Bubuk (stok 3 <= minimum 5) harus terdeteksi');
+  assert.ok(!summary.inventoryWarkop.some((i) => i.ID === invGula.ID), 'Gula Pasir (stok 25 > minimum 8) tidak boleh terdeteksi');
+  assert.ok(summary.total >= 1);
 });
 
 // --- Utils ---
