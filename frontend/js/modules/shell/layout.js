@@ -18,6 +18,14 @@ import { apiCall } from '../../core/api.js';
 const NAV_ITEMS = [
   { path: '/', label: 'Beranda', icon: '🏠', roles: null },
   {
+    group: 'Dashboard', color: 'gabungan',
+    items: [
+      { path: '/dashboard/gabungan', label: 'Dashboard Gabungan', icon: '📊', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/dashboard/barber', label: 'Dashboard Barber', icon: '📊', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/dashboard/warkop', label: 'Dashboard Warkop', icon: '📊', roles: ['Owner', 'Admin', 'Kasir'] }
+    ]
+  },
+  {
     group: 'Barber', color: 'barber',
     items: [
       { path: '/barber/transaksi', label: 'Transaksi Baru', icon: '🧾', roles: ['Owner', 'Admin', 'Kasir'] },

@@ -28,6 +28,9 @@ import { renderTransaksiWarkop } from './modules/warkop/transaksi.js';
 import { renderRiwayatWarkop } from './modules/warkop/riwayat.js';
 import { renderMenuWarkop } from './modules/warkop/menu.js';
 import { renderInventory } from './modules/inventory/index.js';
+import { renderDashboardGabungan } from './modules/dashboard/gabungan.js';
+import { renderDashboardBarber } from './modules/dashboard/barber.js';
+import { renderDashboardWarkop } from './modules/dashboard/warkop.js';
 
 const ALL_ROLES = ['Owner', 'Admin', 'Kasir', 'Capster'];
 
@@ -48,6 +51,11 @@ function registerRoutes() {
   registerRoute('/users', { render: withShell(renderUsers), roles: ['Owner'], title: 'Manajemen User' });
   registerRoute('/audit-log', { render: withShell(renderAuditLog), roles: ['Owner', 'Admin'], title: 'Audit Log' });
   registerRoute('/backup', { render: withShell(renderBackup), roles: ['Owner'], title: 'Backup & Restore' });
+
+  const DASHBOARD_ROLES = ['Owner', 'Admin', 'Kasir'];
+  registerRoute('/dashboard/gabungan', { render: withShell(renderDashboardGabungan), roles: DASHBOARD_ROLES, title: 'Dashboard Gabungan' });
+  registerRoute('/dashboard/barber', { render: withShell(renderDashboardBarber), roles: DASHBOARD_ROLES, title: 'Dashboard Barber' });
+  registerRoute('/dashboard/warkop', { render: withShell(renderDashboardWarkop), roles: DASHBOARD_ROLES, title: 'Dashboard Warkop' });
 
   const BARBER_ROLES = ['Owner', 'Admin', 'Kasir'];
   registerRoute('/barber/transaksi', { render: withShell(renderTransaksiBarber), roles: BARBER_ROLES, title: 'Transaksi Baru - Barber' });

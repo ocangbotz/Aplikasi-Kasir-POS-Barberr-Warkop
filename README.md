@@ -40,7 +40,13 @@ commit di tiap fase, lihat `docs/ARCHITECTURE.md` untuk detail):
       notifikasi stok hampir habis (lonceng + badge di topbar, gabungan
       Inventory Barber+Warkop+Menu Warkop). 70 unit test lulus + simulasi
       backend end-to-end + verifikasi browser Playwright penuh.
-- [ ] Fase 6 — Dashboard (Gabungan/Barber/Warkop) + filter + Chart.js
+- [x] **Fase 6 — Dashboard (Gabungan/Barber/Warkop)**: kartu Hari Ini/Bulan
+      Ini (tetap) + Periode Terpilih (mengikuti filter Hari Ini/Kemarin/
+      Minggu/Bulan/Tahun/Custom Date), grafik Chart.js (tren harian/
+      bulanan/tahunan, jumlah kepala/produk terjual, metode pembayaran),
+      Capster/Layanan Terlaris & Menu/Kategori Terlaris. 83 unit test
+      lulus + simulasi backend end-to-end + verifikasi browser Playwright
+      penuh (termasuk Chart.js ter-lazy-load & ter-render).
 - [ ] Fase 7 — Closing Shift + Gaji Capster
 - [ ] Fase 8 — Laporan + Owner Panel
 - [ ] Fase 9 — PWA lanjutan + fitur bonus premium

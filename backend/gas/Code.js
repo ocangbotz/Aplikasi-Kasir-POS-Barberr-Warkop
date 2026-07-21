@@ -211,6 +211,15 @@ function dispatchAction_(action, token, payload) {
       return listInventory(payload.jenisUsaha);
     }
 
+    case ACTIONS.DASHBOARD_VIEW: {
+      requirePermission(token, action);
+      assertRequiredFields(payload, ['dashboard']);
+      if (payload.dashboard === 'gabungan') return getDashboardGabungan(payload.filterType, payload.customStart, payload.customEnd);
+      if (payload.dashboard === 'barber') return getDashboardBarber(payload.filterType, payload.customStart, payload.customEnd);
+      if (payload.dashboard === 'warkop') return getDashboardWarkop(payload.filterType, payload.customStart, payload.customEnd);
+      throw createAppError('VALIDATION_ERROR', 'dashboard tidak dikenal: ' + payload.dashboard);
+    }
+
     case ACTIONS.INVENTORY_MANAGE: {
       var inventoryActor = requirePermission(token, action);
       assertRequiredFields(payload, ['jenisUsaha']);

@@ -421,3 +421,66 @@ stok rendah → badge notifikasi muncul dgn angka benar → dropdown
 menampilkan detail yang benar → restock via UI mengembalikan stok ke
 aman → Kasir terbukti hanya bisa lihat (tombol kelola tersembunyi) — nol
 error console.
+
+## 12. Dashboard Gabungan/Barber/Warkop (Fase 6)
+
+### Kartu "Hari Ini"/"Bulan Ini" tetap vs filter — resolusi ambiguitas spek
+Spesifikasi mendaftar kartu dashboard secara literal berpasangan "Hari
+Ini"/"Bulan Ini" (mis. "Total Pendapatan Hari Ini, Total Pendapatan Bulan
+Ini, ..."), TAPI juga bilang "Semua dashboard memiliki filter ... Semua
+grafik dan kartu berubah otomatis". Kedua kalimat ini kontradiktif kalau
+ditafsirkan literal sekaligus (kartu yang namanya eksplisit "Hari Ini"
+tidak mungkin ikut berubah jadi bukan hari ini). Keputusan desain:
+- Kartu **Hari Ini** & **Bulan Ini** SELALU dihitung dari tanggal
+  sekarang sungguhan (tidak terpengaruh filter) — referensi tetap yang
+  selalu bermakna sesuai namanya, persis daftar field di spesifikasi.
+- Filter mengontrol blok **"Periode Terpilih"** (kartu tambahan berisi
+  metrik inti yang sama) + SELURUH chart — supaya filter (termasuk Custom
+  Date) tetap punya efek nyata sesuai permintaan "semua kartu & grafik
+  berubah", tanpa membuat kartu "Hari Ini" berbohong soal isinya.
+Diuji eksplisit di simulasi backend: filter custom ke rentang tanpa data
+membuat `periodeTerpilih` = 0, sementara `hariIni` tetap utuh.
+
+### 3 chart Dashboard Gabungan = 3 granularitas tetap, bukan 1 filter
+"Pendapatan Harian/Bulanan/Tahunan" pada Dashboard Gabungan sengaja
+independen dari filter (masing-masing chart tren punya cakupan waktu
+tetap: 14 hari terakhir, 12 bulan tahun berjalan, 5 tahun terakhir) —
+filter cocoknya mengubah SATU rentang, sedangkan 3 chart ini memang
+representasi 3 skala waktu berbeda yang ingin dilihat bersamaan.
+Sebaliknya, Dashboard Barber/Warkop chart "Pendapatan"/"Jumlah Kepala"/
+"Produk Terjual" MENGIKUTI filter aktif (karena di situ cuma ada 1 chart
+tren, bukan 3 granularitas berbeda).
+
+### Agregasi murni & teruji (Aggregate.js)
+Seluruh matematika dashboard (jumlah, group-by-tanggal/bulan/tahun,
+breakdown metode bayar, ranking "terlaris") ada di `Aggregate.js` — murni,
+menerima array transaksi/pengeluaran yang SUDAH difetch (bukan
+SpreadsheetApp langsung), sehingga diuji lengkap lewat Node
+(`tests/backend/aggregate.test.js`, 12 test). `Dashboard.js` (GAS-only)
+hanya bertugas fetch data mentah per rentang tanggal lalu memanggil
+fungsi-fungsi ini. "Total Kepala" (Barber) = jumlah transaksi (1
+transaksi = 1 pelanggan dilayani, walau bisa berisi beberapa layanan
+sekaligus) — bukan jumlah unit layanan terjual.
+
+### Chart.js di-vendor, dimuat lazy
+`chart.js` ada di `dependencies` (bukan devDependencies, dipakai runtime
+browser), file UMD-nya disalin ke `frontend/js/vendor/chart.umd.min.js`
+lewat `npm run vendor:chartjs` (jalankan ulang setelah upgrade versi) —
+supaya PWA tetap bisa dimuat offline tanpa CDN. Untuk menjaga beban awal
+aplikasi tetap ringan, script ini TIDAK dimuat di semua halaman — hanya
+di-inject sekali secara lazy (`core/load-script.js`) saat salah satu dari
+3 halaman Dashboard pertama kali dibuka.
+
+### Testing Fase 6
+Unit test murni: seluruh `Aggregate.js` (12 test) + `core/chart-labels.js`
+(format label sumbu chart). Simulasi backend end-to-end: pendapatan/
+transaksi/pengeluaran/laba-bersih gabungan & per-usaha dihitung akurat
+dari transaksi sungguhan yang dibuat di fase-fase sebelumnya, chart
+harian/bulanan/tahunan punya jumlah titik data yang benar (14/12/5),
+capster & layanan terlaris (Barber) serta menu & kategori terlaris
+(Warkop) terverifikasi sesuai data, filter custom ke rentang kosong tidak
+error, RBAC Capster ditolak total. Verifikasi browser Playwright penuh
+untuk ketiga dashboard: kartu menampilkan angka yang benar, Chart.js
+ter-lazy-load & ter-render (canvas + `window.Chart` tersedia), filter
+Custom Date memunculkan input tanggal, dan Capster terbukti tidak melihat
+menu Dashboard sama sekali di sidebar — nol error console.
