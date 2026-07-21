@@ -58,10 +58,21 @@ async function handleRouteChange() {
     try { currentCleanup(); } catch { /* cleanup best-effort */ }
   }
   currentCleanup = null;
-  appRoot.innerHTML = '';
+
+  // Container BARU per-render (bukan appRoot.innerHTML='' di tempat). Banyak
+  // halaman punya load() async internal (fetch data lalu root.querySelector(...)
+  // untuk update DOM) yang baru selesai SETELAH navigasi berikutnya sudah
+  // membersihkan appRoot -- kalau root lama & baru adalah elemen YANG SAMA,
+  // querySelector itu pulang null dan menyebabkan error (mis. toast keliru
+  // "Gagal memuat data dashboard" padahal user sudah pindah halaman). Dengan
+  // container baru, render lama yang telat itu tetap memutasi subtree LAMA
+  // yang sudah terlepas dari DOM -- aman & senyap, bukan meledak di halaman
+  // yang sekarang aktif.
+  const container = document.createElement('div');
+  appRoot.replaceChildren(container);
 
   document.title = route.title ? `${route.title} · Kasir Barber & Warkop` : 'Kasir Barber & Warkop';
-  const result = await route.render(appRoot);
+  const result = await route.render(container);
 
   if (myToken !== renderToken) {
     if (typeof result === 'function') {

@@ -856,6 +856,36 @@ test('laporanTransaksi_ menghormati filter custom rentang tanggal', () => {
   assert.ok(laporan.transaksi.every((t) => t.tanggal >= weekAgo && t.tanggal <= today));
 });
 
+test('laporanTransaksi_ memaginasi tabel tapi ringkasan tetap dihitung dari SELURUH baris periode', () => {
+  const capster = ctx.appendRowObject_(ctx.SHEETS.CAPSTER, {
+    ID: ctx.generateId_('CAP'), Nama: 'Capster Paginasi', NoHP: '0812', PersentaseBagiHasil: 40, Status: 'Aktif', CreatedAt: new Date(), UpdatedAt: new Date()
+  });
+  const layanan = ctx.appendRowObject_(ctx.SHEETS.LAYANAN_BARBER, {
+    ID: ctx.generateId_('LYN'), Nama: 'Cukur Paginasi', Harga: 20000, Status: 'Aktif', CreatedAt: new Date(), UpdatedAt: new Date()
+  });
+  const before = ctx.laporanTransaksi_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+  const seedCount = 7;
+  for (let i = 0; i < seedCount; i++) {
+    ctx.barberCreateTransaksi_({
+      token: ownerToken, namaPelanggan: 'Pelanggan Paginasi ' + i, capsterId: capster.ID,
+      layanan: [{ layananId: layanan.ID, nama: layanan.Nama, harga: layanan.Harga }],
+      diskon: 0, metodePembayaran: 'Cash'
+    });
+  }
+
+  const page1 = ctx.laporanTransaksi_({ token: ownerToken, usaha: 'Barber', filter: 'today', page: 1, pageSize: 3 });
+  const page2 = ctx.laporanTransaksi_({ token: ownerToken, usaha: 'Barber', filter: 'today', page: 2, pageSize: 3 });
+
+  assert.strictEqual(page1.transaksi.length, 3, 'halaman 1 harus dibatasi tepat pageSize');
+  assert.strictEqual(page2.transaksi.length, 3, 'halaman 2 juga dibatasi pageSize');
+  assert.strictEqual(page1.total, before.total + seedCount, 'total harus mencerminkan SELURUH baris, bukan cuma satu halaman');
+  assert.strictEqual(page1.ringkasan.transaksi, before.ringkasan.transaksi + seedCount, 'ringkasan tetap dihitung dari seluruh baris periode, bukan cuma halaman yang diminta');
+  assert.strictEqual(page1.ringkasan.pendapatan, page2.ringkasan.pendapatan, 'ringkasan sama persis di semua halaman (bukti tidak ikut terpotong paginasi)');
+  const page1Ids = page1.transaksi.map((t) => t.id);
+  const page2Ids = page2.transaksi.map((t) => t.id);
+  assert.ok(page1Ids.every((id) => !page2Ids.includes(id)), 'halaman 1 & 2 tidak boleh tumpang tindih');
+});
+
 // --- Utils ---
 test('generateId_ menghasilkan ID unik', () => {
   const ids = new Set();

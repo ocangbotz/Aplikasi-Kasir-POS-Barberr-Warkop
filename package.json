@@ -17,7 +17,8 @@
     "test:e2e:laporan": "node backend/test/e2e/laporan.js",
     "sync:vendor": "cp node_modules/chart.js/dist/chart.umd.min.js frontend/assets/js/vendor/chart.umd.min.js && cp node_modules/jspdf/dist/jspdf.umd.min.js frontend/assets/js/vendor/jspdf.umd.min.js && cp node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.min.js frontend/assets/js/vendor/jspdf.plugin.autotable.min.js",
     "build:sw": "node scripts/gen-sw.js",
-    "test:e2e:pwa": "node backend/test/e2e/pwa.js"
+    "test:e2e:pwa": "node backend/test/e2e/pwa.js",
+    "test:perf": "node backend/test/perf-scale.js"
   },
   "license": "MIT",
   "devDependencies": {

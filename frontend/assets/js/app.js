@@ -1,9 +1,14 @@
 /**
  * app.js
  * Entry point aplikasi. Mendaftarkan tema, rute, dan menu, lalu boot.
- * File modul fase berikutnya (Barber, Warkop, dst.) akan diimpor & didaftarkan
- * di sini juga -- app.js sengaja tetap tipis, logika sesungguhnya ada di
- * masing-masing modul.
+ *
+ * Optimasi performa (Fase 10): hanya login.js & layout.js (shell) yang
+ * di-import statis -- wajib ada untuk cat pertama. Semua modul halaman
+ * lain dimuat lewat import() dinamis SAAT rute-nya benar-benar dibuka
+ * (code-splitting), supaya beban parse/eksekusi JS awal tidak mencakup
+ * puluhan halaman yang belum tentu dikunjungi user di sesi itu. Service
+ * Worker (Fase 9) tetap men-precache semua chunk ini, jadi setelah
+ * kunjungan pertama pun tetap instan & offline-ready.
  */
 import { initTheme } from './core/theme.js';
 import { initPWA } from './core/pwa.js';
@@ -12,60 +17,42 @@ import { initRouter, registerRoute } from './core/router.js';
 import { registerNavItem } from './core/nav.js';
 import { renderLogin } from './pages/login.js';
 import { renderLayout } from './pages/layout.js';
-import { renderHome } from './pages/home.js';
-import { renderBarberTransaksi } from './pages/barber/transaksi.js';
-import { renderBarberRiwayat } from './pages/barber/riwayat.js';
-import { renderBarberLayanan } from './pages/barber/layanan.js';
-import { renderBarberCapster } from './pages/barber/capster.js';
-import { renderWarkopPesanan } from './pages/warkop/pesanan.js';
-import { renderWarkopRiwayat } from './pages/warkop/riwayat.js';
-import { renderWarkopProduk } from './pages/warkop/produk.js';
-import { renderInventoryBarber } from './pages/inventory/barber.js';
-import { renderInventoryWarkop } from './pages/inventory/warkop.js';
-import { renderPengeluaranBarber } from './pages/pengeluaran/barber.js';
-import { renderPengeluaranWarkop } from './pages/pengeluaran/warkop.js';
-import { renderDashboardGabungan } from './pages/dashboard/gabungan.js';
-import { renderDashboardBarber } from './pages/dashboard/barber.js';
-import { renderDashboardWarkop } from './pages/dashboard/warkop.js';
-import { renderLaporan } from './pages/laporan/index.js';
-import { renderShift } from './pages/shift/index.js';
-import { renderGajiCapster } from './pages/gaji-capster/index.js';
-import { renderPelanggan } from './pages/pelanggan/index.js';
-import { renderAuditLog } from './pages/audit-log/index.js';
-import { renderOwnerUsers } from './pages/owner/users.js';
-import { renderOwnerTransaksi } from './pages/owner/transaksi.js';
-import { renderOwnerBackup } from './pages/owner/backup.js';
+
+/** Bungkus import() dinamis + nama export jadi fungsi render yang dipanggil router. */
+function lazy(importFn, exportName) {
+  return (root) => importFn().then((m) => m[exportName](root));
+}
 
 registerRoute('/login', { public: true, title: 'Masuk', render: renderLogin });
-registerRoute('/', { permission: 'dashboard', title: 'Dashboard Gabungan', render: renderDashboardGabungan });
-registerRoute('/dashboard/barber', { permission: 'dashboard', title: 'Dashboard Barber', render: renderDashboardBarber });
-registerRoute('/dashboard/warkop', { permission: 'dashboard', title: 'Dashboard Warkop', render: renderDashboardWarkop });
-registerRoute('/profil', { title: 'Profil Saya', render: renderHome });
+registerRoute('/', { permission: 'dashboard', title: 'Dashboard Gabungan', render: lazy(() => import('./pages/dashboard/gabungan.js'), 'renderDashboardGabungan') });
+registerRoute('/dashboard/barber', { permission: 'dashboard', title: 'Dashboard Barber', render: lazy(() => import('./pages/dashboard/barber.js'), 'renderDashboardBarber') });
+registerRoute('/dashboard/warkop', { permission: 'dashboard', title: 'Dashboard Warkop', render: lazy(() => import('./pages/dashboard/warkop.js'), 'renderDashboardWarkop') });
+registerRoute('/profil', { title: 'Profil Saya', render: lazy(() => import('./pages/home.js'), 'renderHome') });
 
-registerRoute('/barber/transaksi', { permission: 'transaksiBarber', title: 'Transaksi Barber', render: renderBarberTransaksi });
-registerRoute('/barber/riwayat', { permission: 'transaksiBarber', title: 'Riwayat Barber', render: renderBarberRiwayat });
-registerRoute('/barber/layanan', { permission: 'kelolaLayananProduk', title: 'Layanan Barber', render: renderBarberLayanan });
-registerRoute('/barber/capster', { permission: 'kelolaCapster', title: 'Data Capster', render: renderBarberCapster });
+registerRoute('/barber/transaksi', { permission: 'transaksiBarber', title: 'Transaksi Barber', render: lazy(() => import('./pages/barber/transaksi.js'), 'renderBarberTransaksi') });
+registerRoute('/barber/riwayat', { permission: 'transaksiBarber', title: 'Riwayat Barber', render: lazy(() => import('./pages/barber/riwayat.js'), 'renderBarberRiwayat') });
+registerRoute('/barber/layanan', { permission: 'kelolaLayananProduk', title: 'Layanan Barber', render: lazy(() => import('./pages/barber/layanan.js'), 'renderBarberLayanan') });
+registerRoute('/barber/capster', { permission: 'kelolaCapster', title: 'Data Capster', render: lazy(() => import('./pages/barber/capster.js'), 'renderBarberCapster') });
 
-registerRoute('/warkop/pesanan', { permission: 'transaksiWarkop', title: 'Pesanan Warkop', render: renderWarkopPesanan });
-registerRoute('/warkop/riwayat', { permission: 'transaksiWarkop', title: 'Riwayat Warkop', render: renderWarkopRiwayat });
-registerRoute('/warkop/produk', { permission: 'kelolaLayananProduk', title: 'Menu Warkop', render: renderWarkopProduk });
+registerRoute('/warkop/pesanan', { permission: 'transaksiWarkop', title: 'Pesanan Warkop', render: lazy(() => import('./pages/warkop/pesanan.js'), 'renderWarkopPesanan') });
+registerRoute('/warkop/riwayat', { permission: 'transaksiWarkop', title: 'Riwayat Warkop', render: lazy(() => import('./pages/warkop/riwayat.js'), 'renderWarkopRiwayat') });
+registerRoute('/warkop/produk', { permission: 'kelolaLayananProduk', title: 'Menu Warkop', render: lazy(() => import('./pages/warkop/produk.js'), 'renderWarkopProduk') });
 
-registerRoute('/inventory/barber', { permission: 'inventory', title: 'Inventory Barber', render: renderInventoryBarber });
-registerRoute('/inventory/warkop', { permission: 'inventory', title: 'Inventory Warkop', render: renderInventoryWarkop });
+registerRoute('/inventory/barber', { permission: 'inventory', title: 'Inventory Barber', render: lazy(() => import('./pages/inventory/barber.js'), 'renderInventoryBarber') });
+registerRoute('/inventory/warkop', { permission: 'inventory', title: 'Inventory Warkop', render: lazy(() => import('./pages/inventory/warkop.js'), 'renderInventoryWarkop') });
 
-registerRoute('/pengeluaran/barber', { permission: 'pengeluaran', title: 'Pengeluaran Barber', render: renderPengeluaranBarber });
-registerRoute('/pengeluaran/warkop', { permission: 'pengeluaran', title: 'Pengeluaran Warkop', render: renderPengeluaranWarkop });
+registerRoute('/pengeluaran/barber', { permission: 'pengeluaran', title: 'Pengeluaran Barber', render: lazy(() => import('./pages/pengeluaran/barber.js'), 'renderPengeluaranBarber') });
+registerRoute('/pengeluaran/warkop', { permission: 'pengeluaran', title: 'Pengeluaran Warkop', render: lazy(() => import('./pages/pengeluaran/warkop.js'), 'renderPengeluaranWarkop') });
 
-registerRoute('/laporan', { permission: 'laporan', title: 'Laporan', render: renderLaporan });
-registerRoute('/shift', { permission: 'closingShift', title: 'Closing Shift', render: renderShift });
-registerRoute('/gaji-capster', { permission: 'gajiCapster', title: 'Gaji Capster', render: renderGajiCapster });
-registerRoute('/pelanggan', { permission: 'pelanggan', title: 'Data Pelanggan', render: renderPelanggan });
+registerRoute('/laporan', { permission: 'laporan', title: 'Laporan', render: lazy(() => import('./pages/laporan/index.js'), 'renderLaporan') });
+registerRoute('/shift', { permission: 'closingShift', title: 'Closing Shift', render: lazy(() => import('./pages/shift/index.js'), 'renderShift') });
+registerRoute('/gaji-capster', { permission: 'gajiCapster', title: 'Gaji Capster', render: lazy(() => import('./pages/gaji-capster/index.js'), 'renderGajiCapster') });
+registerRoute('/pelanggan', { permission: 'pelanggan', title: 'Data Pelanggan', render: lazy(() => import('./pages/pelanggan/index.js'), 'renderPelanggan') });
 
-registerRoute('/owner/users', { permission: 'kelolaUser', title: 'Kelola User', render: renderOwnerUsers });
-registerRoute('/owner/transaksi', { permission: 'editTransaksi', title: 'Kelola Transaksi', render: renderOwnerTransaksi });
-registerRoute('/owner/audit-log', { permission: 'auditLog', title: 'Audit Log', render: renderAuditLog });
-registerRoute('/owner/backup', { permission: 'backupRestore', title: 'Backup & Restore', render: renderOwnerBackup });
+registerRoute('/owner/users', { permission: 'kelolaUser', title: 'Kelola User', render: lazy(() => import('./pages/owner/users.js'), 'renderOwnerUsers') });
+registerRoute('/owner/transaksi', { permission: 'editTransaksi', title: 'Kelola Transaksi', render: lazy(() => import('./pages/owner/transaksi.js'), 'renderOwnerTransaksi') });
+registerRoute('/owner/audit-log', { permission: 'auditLog', title: 'Audit Log', render: lazy(() => import('./pages/audit-log/index.js'), 'renderAuditLog') });
+registerRoute('/owner/backup', { permission: 'backupRestore', title: 'Backup & Restore', render: lazy(() => import('./pages/owner/backup.js'), 'renderOwnerBackup') });
 registerRoute('/404', {
   public: true,
   title: 'Halaman Tidak Ditemukan',

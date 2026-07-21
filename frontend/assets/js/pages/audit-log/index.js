@@ -29,11 +29,33 @@ export async function renderAuditLog(root) {
           <tbody id="log-body"></tbody>
         </table>
       </div>
+
+      <div class="flex items-center justify-between text-sm">
+        <span id="log-summary" class="text-slate-500 dark:text-slate-400"></span>
+        <div class="flex gap-2">
+          <button id="prev-page" type="button" class="btn-ghost border border-slate-200 dark:border-white/10">‹ Sebelumnya</button>
+          <button id="next-page" type="button" class="btn-ghost border border-slate-200 dark:border-white/10">Selanjutnya ›</button>
+        </div>
+      </div>
     </div>
   `;
 
-  try {
-    const { logs } = await apiCall('auditLogList', { limit: 300 });
+  let page = 1;
+  const pageSize = 50;
+
+  async function load() {
+    let logs = [];
+    try {
+      const result = await apiCall('auditLogList', { page, pageSize });
+      logs = result.logs;
+      const totalPages = Math.max(Math.ceil(result.total / pageSize), 1);
+      root.querySelector('#log-summary').textContent = `${result.total} aktivitas · Halaman ${page}/${totalPages}`;
+      root.querySelector('#prev-page').disabled = page <= 1;
+      root.querySelector('#next-page').disabled = page >= totalPages;
+    } catch (err) {
+      toastError(err instanceof ApiError ? err.message : 'Gagal memuat audit log.');
+      return;
+    }
     root.querySelector('#log-body').innerHTML = logs.map((log, i) => `
       <tr class="border-t border-slate-200/60 dark:border-white/10">
         <td class="px-3 py-2 whitespace-nowrap text-xs">${fmtDateTime(log.Timestamp)}</td>
@@ -58,9 +80,12 @@ export async function renderAuditLog(root) {
         root.querySelector('#detail-row-' + btn.dataset.idx).classList.toggle('hidden');
       });
     });
-  } catch (err) {
-    toastError(err instanceof ApiError ? err.message : 'Gagal memuat audit log.');
   }
+
+  root.querySelector('#prev-page').addEventListener('click', () => { if (page > 1) { page--; load(); } });
+  root.querySelector('#next-page').addEventListener('click', () => { page++; load(); });
+
+  await load();
 }
 
 function escapeHtml(str) {

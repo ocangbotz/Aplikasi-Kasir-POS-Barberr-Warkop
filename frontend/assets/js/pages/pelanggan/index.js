@@ -112,8 +112,8 @@ export async function renderPelanggan(root) {
       overlay.querySelector('#member-toggle').addEventListener('change', async (e) => {
         try {
           await apiCall('pelangganSetMember', { id, member: e.target.checked });
+          await load(root.querySelector('#search-input').value);
           toastSuccess('Status member diperbarui.');
-          load(root.querySelector('#search-input').value);
         } catch (err) {
           toastError(err instanceof ApiError ? err.message : 'Gagal mengubah status member.');
           e.target.checked = !e.target.checked;

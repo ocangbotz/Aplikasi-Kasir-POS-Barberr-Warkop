@@ -62,9 +62,8 @@ export async function renderShift(root) {
           e.preventDefault();
           try {
             await apiCall('shiftOpen', { saldoAwal: Number(root.querySelector('#saldo-awal').value) || 0 });
+            await Promise.all([loadCurrent(), loadHistory()]);
             toastSuccess('Shift dibuka.');
-            loadCurrent();
-            loadHistory();
           } catch (err) {
             toastError(err instanceof ApiError ? err.message : 'Gagal membuka shift.');
           }
@@ -97,9 +96,8 @@ export async function renderShift(root) {
             uangKasFisik: Number(root.querySelector('#uang-kas-fisik').value),
             catatanKasir: root.querySelector('#catatan-kasir').value.trim()
           });
+          await Promise.all([loadCurrent(), loadHistory()]);
           toastSuccess(`Shift ditutup. Selisih kas: ${formatRupiah(closed.SelisihKas)}`);
-          loadCurrent();
-          loadHistory();
         } catch (err) {
           toastError(err instanceof ApiError ? err.message : 'Gagal menutup shift.');
         }
@@ -133,9 +131,8 @@ export async function renderShift(root) {
         btn.addEventListener('click', async () => {
           try {
             await apiCall('shiftReopen', { id: btn.dataset.id });
+            await Promise.all([loadCurrent(), loadHistory()]);
             toastSuccess('Shift dibuka kembali.');
-            loadCurrent();
-            loadHistory();
           } catch (err) {
             toastError(err instanceof ApiError ? err.message : 'Gagal membuka kembali shift.');
           }

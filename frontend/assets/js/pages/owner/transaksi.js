@@ -110,9 +110,9 @@ export async function renderOwnerTransaksi(root) {
           status: overlay.querySelector('#edit-status').value,
           catatan: overlay.querySelector('#edit-catatan').value.trim()
         });
-        toastSuccess('Transaksi berhasil diperbarui.');
         overlay.remove();
-        load();
+        await load();
+        toastSuccess('Transaksi berhasil diperbarui.');
       } catch (err) {
         toastError(err instanceof ApiError ? err.message : 'Gagal memperbarui transaksi.');
       }
@@ -122,8 +122,8 @@ export async function renderOwnerTransaksi(root) {
   async function handleDelete(id) {
     try {
       await apiCall('ownerDeleteTransaksi', { usaha: usahaSelect.value, id });
+      await load();
       toastSuccess('Transaksi dihapus (bisa di-restore).');
-      load();
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal menghapus transaksi.');
     }
@@ -132,8 +132,8 @@ export async function renderOwnerTransaksi(root) {
   async function handleRestore(id) {
     try {
       await apiCall('ownerRestoreTransaksi', { usaha: usahaSelect.value, id });
+      await load();
       toastSuccess('Transaksi berhasil dipulihkan.');
-      load();
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal memulihkan transaksi.');
     }

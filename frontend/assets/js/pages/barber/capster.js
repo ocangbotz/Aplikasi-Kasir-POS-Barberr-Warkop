@@ -114,9 +114,9 @@ export async function renderBarberCapster(root) {
         persentaseBagiHasil: Number(persentaseInput.value),
         status: statusInput.value
       });
-      toastSuccess('Capster berhasil disimpan.');
       resetForm();
-      load();
+      await load();
+      toastSuccess('Capster berhasil disimpan.');
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal menyimpan capster.');
     }

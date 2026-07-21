@@ -129,9 +129,9 @@ export async function renderOwnerUsers(root) {
         status: statusInput.value,
         password: passwordInput.value || undefined
       });
-      toastSuccess('Akun berhasil disimpan.');
       resetForm();
-      load();
+      await load();
+      toastSuccess('Akun berhasil disimpan.');
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal menyimpan akun.');
     }

@@ -141,8 +141,8 @@ export async function renderGajiCapster(root) {
         keterlambatan: Number(root.querySelector('#keterlambatan').value) || 0,
         catatan: root.querySelector('#catatan').value.trim()
       });
+      await loadHistory();
       toastSuccess('Gaji capster berhasil disimpan.');
-      loadHistory();
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal menyimpan gaji.');
     }

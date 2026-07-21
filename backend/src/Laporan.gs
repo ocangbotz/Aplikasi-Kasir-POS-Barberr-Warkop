@@ -77,7 +77,19 @@ function laporanTransaksi_(payload) {
     );
   }
 
-  return { usaha: usaha, periode: range, ringkasan: ringkasan, transaksi: rows };
+  // Paginasi hasil tabel (bukan ringkasan -- ringkasan di atas selalu dihitung
+  // dari SELURUH baris pada rentang, terlepas dari halaman yang diminta) supaya
+  // DOM tabel & payload tetap ringan walau periode berisi puluhan ribu transaksi.
+  // pageSize maksimum sengaja lebih besar dari daftar riwayat biasa (500 vs 100)
+  // supaya ekspor (yang mengambil beberapa halaman berurutan) tidak perlu
+  // terlalu banyak roundtrip.
+  var totalRows = rows.length;
+  var page = Math.max(Number(payload.page) || 1, 1);
+  var pageSize = Math.min(Math.max(Number(payload.pageSize) || 50, 1), 500);
+  var start = (page - 1) * pageSize;
+  var pageRows = rows.slice(start, start + pageSize);
+
+  return { usaha: usaha, periode: range, ringkasan: ringkasan, transaksi: pageRows, total: totalRows, page: page, pageSize: pageSize };
 }
 
 /** Laporan pengeluaran gabungan Barber+Warkop (atau salah satu) untuk periode yang sama. */

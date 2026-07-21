@@ -136,10 +136,10 @@ export async function renderPengeluaranPage(root, usaha, accentBtnClass) {
       if (fotoFile) payload.fotoNotaBase64 = await readFileAsDataUrl(fotoFile);
 
       await apiCall('pengeluaranCreate', payload);
-      toastSuccess('Pengeluaran berhasil dicatat.');
       form.reset();
       tanggalInput.value = todayISODate();
-      load();
+      await load();
+      toastSuccess('Pengeluaran berhasil dicatat.');
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal mencatat pengeluaran.');
     } finally {

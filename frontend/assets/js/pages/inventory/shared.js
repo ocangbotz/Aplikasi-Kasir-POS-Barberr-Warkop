@@ -203,9 +203,9 @@ export async function renderInventoryPage(root, usaha, accentBtnClass) {
       if (!alasan) return toastError('Pilih alasan penyesuaian.');
       try {
         await apiCall('inventoryAdjustStock', { usaha, id: item.ID, delta: jumlah * arah, alasan, catatan });
-        toastSuccess('Stok berhasil disesuaikan.');
         overlay.remove();
-        onDone();
+        await onDone();
+        toastSuccess('Stok berhasil disesuaikan.');
       } catch (err) {
         toastError(err instanceof ApiError ? err.message : 'Gagal menyesuaikan stok.');
       }
@@ -230,9 +230,9 @@ export async function renderInventoryPage(root, usaha, accentBtnClass) {
       if (!idInput.value) payload.stok = Number(stokInput.value) || 0;
 
       await apiCall('inventorySaveItem', payload);
-      toastSuccess('Item inventory berhasil disimpan.');
       resetForm();
-      load();
+      await load();
+      toastSuccess('Item inventory berhasil disimpan.');
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal menyimpan item inventory.');
     }

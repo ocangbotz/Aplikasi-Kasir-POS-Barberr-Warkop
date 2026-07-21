@@ -21,6 +21,9 @@ function auditLogList_(payload) {
   requirePermission_(session, 'auditLog');
   var data = getSheetData_(SHEETS.AUDIT_LOG);
   var rows = data.rows.sort(function (a, b) { return new Date(b.Timestamp) - new Date(a.Timestamp); });
-  var limit = payload.limit || 200;
-  return { logs: rows.slice(0, limit) };
+
+  var page = Math.max(Number(payload.page) || 1, 1);
+  var pageSize = Math.min(Math.max(Number(payload.pageSize) || 50, 1), 200);
+  var start = (page - 1) * pageSize;
+  return { logs: rows.slice(start, start + pageSize), total: rows.length, page: page, pageSize: pageSize };
 }

@@ -23,7 +23,9 @@ berikutnya (lihat `docs/`).
 | 7 | Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel | ✅ Selesai |
 | 8 | Laporan + export (PDF/Excel/CSV/Print) | ✅ Selesai |
 | 9 | PWA (manifest, service worker, offline, install) | ✅ Selesai |
-| 10 | Optimasi performa & testing menyeluruh | ⏳ |
+| 10 | Optimasi performa & testing menyeluruh | ✅ Selesai |
+
+**Semua 10 fase selesai.** Aplikasi lengkap dan teruji end-to-end.
 
 ## Struktur Folder
 
@@ -47,7 +49,7 @@ docs/             Panduan instalasi & deployment per fase
 7. **Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel** → lihat [`docs/07-CLOSING-SHIFT-GAJI-PELANGGAN-OWNER.md`](docs/07-CLOSING-SHIFT-GAJI-PELANGGAN-OWNER.md)
 8. **Laporan + Export PDF/Excel/CSV/Print** → lihat [`docs/08-LAPORAN.md`](docs/08-LAPORAN.md)
 9. **PWA (manifest, service worker, offline, install)** → lihat [`docs/09-PWA.md`](docs/09-PWA.md)
-10. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
+10. **Optimasi performa, testing menyeluruh & deploy produksi** → lihat [`docs/10-OPTIMASI-TESTING.md`](docs/10-OPTIMASI-TESTING.md)
 
 ## Menjalankan Test
 
@@ -64,4 +66,5 @@ npm run test:e2e:dashboard   # e2e Dashboard + filter + Chart.js
 npm run test:e2e:owner-panel # e2e Closing Shift, Gaji Capster, Pelanggan, Audit Log, Owner Panel
 npm run test:e2e:laporan     # e2e Laporan + export PDF/Excel/CSV/Print
 npm run test:e2e:pwa         # e2e PWA: manifest, Service Worker, offline app-shell
+npm run test:perf            # uji skala 100.000 transaksi (paginasi, waktu operasi baca)
 ```

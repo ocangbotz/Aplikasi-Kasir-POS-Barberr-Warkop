@@ -97,8 +97,8 @@ export async function renderBarberLayanan(root) {
           const l = layanan.find((x) => x.ID === btn.dataset.id);
           try {
             await apiCall('barberSaveLayanan', { id: l.ID, nama: l.Nama, harga: l.Harga, durasi: l.Durasi, statusAktif: btn.dataset.status === 'true' });
+            await load();
             toastSuccess('Status layanan diperbarui.');
-            load();
           } catch (err) {
             toastError(err instanceof ApiError ? err.message : 'Gagal mengubah status layanan.');
           }
@@ -120,9 +120,9 @@ export async function renderBarberLayanan(root) {
         harga: Number(hargaInput.value),
         durasi: Number(durasiInput.value) || 0
       });
-      toastSuccess('Layanan berhasil disimpan.');
       resetForm();
-      load();
+      await load();
+      toastSuccess('Layanan berhasil disimpan.');
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal menyimpan layanan.');
     }

@@ -127,8 +127,8 @@ export async function renderWarkopProduk(root) {
               id: p.ID, nama: p.Nama, kategori: p.Kategori, modal: p.Modal, hargaJual: p.HargaJual,
               stokMinimum: p.StokMinimum, statusAktif: btn.dataset.status === 'true'
             });
+            await load();
             toastSuccess('Status menu diperbarui.');
-            load();
           } catch (err) {
             toastError(err instanceof ApiError ? err.message : 'Gagal mengubah status menu.');
           }
@@ -155,9 +155,9 @@ export async function renderWarkopProduk(root) {
       if (!idInput.value) payload.stok = Number(stokInput.value) || 0;
 
       await apiCall('warkopSaveProduk', payload);
-      toastSuccess('Menu berhasil disimpan.');
       resetForm();
-      load();
+      await load();
+      toastSuccess('Menu berhasil disimpan.');
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal menyimpan menu.');
     }

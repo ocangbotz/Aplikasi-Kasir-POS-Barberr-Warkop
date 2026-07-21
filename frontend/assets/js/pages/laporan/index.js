@@ -17,6 +17,14 @@ const USAHA_TABS = [
 ];
 
 const TABLE_HEADERS = ['Tanggal', 'Jam', 'Usaha', 'No. Transaksi', 'Deskripsi', 'Kasir', 'Subtotal', 'Diskon', 'Total', 'Metode', 'Status'];
+const PAGE_SIZE = 20;
+// Ekspor mengambil beberapa halaman berurutan (bukan satu request tak terbatas)
+// supaya payload per-request tetap wajar; EXPORT_MAX_PAGES membatasi total baris
+// yang diekspor sekali klik (20 x 500 = 10.000 baris) supaya PDF/print di browser
+// tidak macet untuk periode yang sangat besar -- user diberi tahu & diarahkan
+// mempersempit filter periode jika datanya terpotong.
+const EXPORT_PAGE_SIZE = 500;
+const EXPORT_MAX_PAGES = 20;
 
 function toExportRows(transaksi) {
   return transaksi.map((t) => [
@@ -83,10 +91,19 @@ export async function renderLaporan(root) {
         </table>
         <p id="empty-state" class="hidden py-8 text-center text-xs text-slate-400">Tidak ada transaksi pada periode ini.</p>
       </div>
+
+      <div class="flex items-center justify-between text-sm">
+        <span id="page-summary" class="text-slate-500 dark:text-slate-400"></span>
+        <div class="flex gap-2">
+          <button id="prev-page" type="button" class="btn-ghost border border-slate-200 dark:border-white/10">‹ Sebelumnya</button>
+          <button id="next-page" type="button" class="btn-ghost border border-slate-200 dark:border-white/10">Selanjutnya ›</button>
+        </div>
+      </div>
     </div>
   `;
 
   let usaha = 'Gabungan';
+  let page = 1;
   let lastData = null;
 
   function renderUsahaTabs() {
@@ -100,7 +117,7 @@ export async function renderLaporan(root) {
 
   async function load(state) {
     try {
-      const data = await apiCall('laporanTransaksi', { usaha, ...state });
+      const data = await apiCall('laporanTransaksi', { usaha, page, pageSize: PAGE_SIZE, ...state });
       lastData = data;
       root.querySelector('#cards-periode').innerHTML = metricCardsHtml(data.ringkasan);
       setPeriodeLabel(root, data.periode);
@@ -108,7 +125,12 @@ export async function renderLaporan(root) {
       const tbody = root.querySelector('#laporan-rows');
       tbody.innerHTML = data.transaksi.map(tableRowHtml).join('');
       root.querySelector('#empty-state').classList.toggle('hidden', data.transaksi.length > 0);
-      root.querySelector('#row-count').textContent = `${data.transaksi.length} transaksi`;
+      root.querySelector('#row-count').textContent = `${data.total} transaksi`;
+
+      const totalPages = Math.max(Math.ceil(data.total / PAGE_SIZE), 1);
+      root.querySelector('#page-summary').textContent = `Halaman ${data.page}/${totalPages}`;
+      root.querySelector('#prev-page').disabled = data.page <= 1;
+      root.querySelector('#next-page').disabled = data.page >= totalPages;
     } catch (err) {
       toastError(err instanceof ApiError ? err.message : 'Gagal memuat laporan.');
     }
@@ -117,10 +139,14 @@ export async function renderLaporan(root) {
   root.querySelectorAll('.usaha-tab').forEach((btn) => {
     btn.addEventListener('click', () => {
       usaha = btn.dataset.usaha;
+      page = 1;
       renderUsahaTabs();
       load(filterState);
     });
   });
+
+  root.querySelector('#prev-page').addEventListener('click', () => { if (page > 1) { page--; load(filterState); } });
+  root.querySelector('#next-page').addEventListener('click', () => { page++; load(filterState); });
 
   function summaryLines(data) {
     const periodeText = data.periode.startDate === data.periode.endDate ? data.periode.startDate : `${data.periode.startDate} s/d ${data.periode.endDate}`;
@@ -130,16 +156,36 @@ export async function renderLaporan(root) {
     ];
   }
 
-  function requireData() {
-    if (!lastData || lastData.transaksi.length === 0) {
+  /**
+   * Tabel layar dipaginasi (lihat load()), tapi ekspor harus mencakup SELURUH
+   * transaksi periode yang difilter -- ambil beberapa halaman berurutan
+   * (EXPORT_PAGE_SIZE per request) sampai semua baris terkumpul atau
+   * EXPORT_MAX_PAGES tercapai (batas aman supaya browser tidak macet
+   * generate PDF/print untuk periode yang sangat besar).
+   */
+  async function fetchAllForExport() {
+    if (!lastData || lastData.total === 0) {
       toastInfo('Tidak ada data untuk diekspor pada periode ini.');
       return null;
     }
-    return lastData;
+    let all = [];
+    let exportPage = 1;
+    let data;
+    do {
+      data = await apiCall('laporanTransaksi', { usaha, ...filterState, page: exportPage, pageSize: EXPORT_PAGE_SIZE });
+      all = all.concat(data.transaksi);
+      exportPage++;
+    } while (all.length < data.total && exportPage <= EXPORT_MAX_PAGES);
+
+    const truncated = all.length < data.total;
+    if (truncated) {
+      toastInfo(`Data melebihi batas ekspor (${all.length} dari ${data.total} baris). Persempit filter periode untuk laporan lengkap.`);
+    }
+    return Object.assign({}, data, { transaksi: all });
   }
 
-  root.querySelector('#export-pdf').addEventListener('click', () => {
-    const data = requireData();
+  root.querySelector('#export-pdf').addEventListener('click', async () => {
+    const data = await fetchAllForExport();
     if (!data) return;
     try {
       exportPDF(`laporan-${data.usaha.toLowerCase()}-${data.periode.startDate}_${data.periode.endDate}.pdf`,
@@ -149,26 +195,26 @@ export async function renderLaporan(root) {
     }
   });
 
-  root.querySelector('#export-excel').addEventListener('click', () => {
-    const data = requireData();
+  root.querySelector('#export-excel').addEventListener('click', async () => {
+    const data = await fetchAllForExport();
     if (!data) return;
     exportExcel(`laporan-${data.usaha.toLowerCase()}-${data.periode.startDate}_${data.periode.endDate}.xls`,
       `Laporan ${data.usaha}`, TABLE_HEADERS, toExportRows(data.transaksi));
   });
 
-  root.querySelector('#export-csv').addEventListener('click', () => {
-    const data = requireData();
+  root.querySelector('#export-csv').addEventListener('click', async () => {
+    const data = await fetchAllForExport();
     if (!data) return;
     exportCSV(`laporan-${data.usaha.toLowerCase()}-${data.periode.startDate}_${data.periode.endDate}.csv`,
       TABLE_HEADERS, toExportRows(data.transaksi));
   });
 
-  root.querySelector('#export-print').addEventListener('click', () => {
-    const data = requireData();
+  root.querySelector('#export-print').addEventListener('click', async () => {
+    const data = await fetchAllForExport();
     if (!data) return;
     printReport(`Laporan ${data.usaha}`, TABLE_HEADERS, toExportRows(data.transaksi), summaryLines(data));
   });
 
-  let filterState = wireFilterBar(root, (state) => { filterState = state; load(state); }, 'bg-gabungan-600 text-white');
+  let filterState = wireFilterBar(root, (state) => { filterState = state; page = 1; load(state); }, 'bg-gabungan-600 text-white');
   await load(filterState);
 }
