@@ -116,7 +116,7 @@ function parseTransaksiBarberRow_(row) {
 
 function listTransaksiBarber(filterOptions) {
   var opts = filterOptions || {};
-  var all = dbGetAll(SHEET.TRANSAKSI_BARBER);
+  var all = dbGetAll(SHEET.TRANSAKSI_BARBER, { includeDeleted: !!opts.includeDeleted });
 
   if (opts.filterType) {
     var range = resolveDateRangeFilter(opts.filterType, opts.customStart, opts.customEnd);
@@ -133,11 +133,90 @@ function getTransaksiBarberById(transaksiId) {
   return parseTransaksiBarberRow_(row);
 }
 
-// validateTransaksiBarberPayload_ murni (hanya memvalidasi bentuk payload,
-// tidak menyentuh Db) -> diekspor untuk Node supaya diuji langsung.
+/**
+ * Field yang boleh diedit Owner/Admin di Owner Panel. Item/harga/diskon/
+ * metode bayar SENGAJA tidak termasuk — nominalnya sudah ikut dihitung di
+ * rekonsiliasi Closing Shift (kalau shift-nya sudah ditutup) dan agregat
+ * Dashboard/Laporan; mengubahnya diam-diam bisa merusak angka yang sudah
+ * "terkunci" di masa lalu. Koreksi nominal/item pakai Hapus + transaksi
+ * baru, bukan edit di tempat. Murni -> diuji lewat Node.
+ */
+function buildTransaksiBarberEditPatch_(payload) {
+  var patch = {};
+  if (payload.catatan !== undefined) patch.Catatan = sanitizeString(payload.catatan, 500);
+  if (payload.namaPelanggan !== undefined) patch.NamaPelanggan = sanitizeString(payload.namaPelanggan, 150);
+  if (payload.noHp !== undefined) patch.NoHP = sanitizeString(payload.noHp, 20);
+  return patch;
+}
+
+function updateTransaksiBarber(transaksiId, payload, actor) {
+  var existing = dbFindByField(SHEET.TRANSAKSI_BARBER, 'TransaksiID', transaksiId);
+  if (!existing) throw createAppError('NOT_FOUND', 'Transaksi tidak ditemukan');
+  if (existing.Deleted === true) throw createAppError('VALIDATION_ERROR', 'Transaksi yang sudah dihapus tidak bisa diedit. Pulihkan dulu.');
+
+  var patch = buildTransaksiBarberEditPatch_(payload);
+  if (payload.capsterId !== undefined) {
+    var capster = dbFindByField(SHEET.CAPSTER, 'CapsterID', payload.capsterId);
+    if (!capster || capster.Aktif !== true) throw createAppError('VALIDATION_ERROR', 'Capster tidak ditemukan atau sedang tidak aktif.');
+    patch.CapsterID = capster.CapsterID;
+    patch.NamaCapster = capster.Nama;
+  }
+  patch.UpdatedAt = new Date().toISOString();
+
+  var updated = dbUpdateById(SHEET.TRANSAKSI_BARBER, 'TransaksiID', transaksiId, patch);
+  logAudit({
+    userId: actor.uid, userName: actor.name, role: actor.role,
+    action: 'transaksi.update', module: 'Barber', targetId: transaksiId,
+    detail: { fields: Object.keys(patch) }, result: 'Success'
+  });
+  return parseTransaksiBarberRow_(updated);
+}
+
+function deleteTransaksiBarber(transaksiId, reason, actor) {
+  var existing = dbFindByField(SHEET.TRANSAKSI_BARBER, 'TransaksiID', transaksiId);
+  if (!existing) throw createAppError('NOT_FOUND', 'Transaksi tidak ditemukan');
+  if (existing.Deleted === true) throw createAppError('VALIDATION_ERROR', 'Transaksi ini sudah dihapus.');
+  var alasan = sanitizeString(reason, 500);
+  if (!alasan) throw createAppError('VALIDATION_ERROR', 'Alasan penghapusan wajib diisi.');
+
+  dbUpdateById(SHEET.TRANSAKSI_BARBER, 'TransaksiID', transaksiId, {
+    Deleted: true, DeletedAt: new Date().toISOString(), DeletedBy: actor.name, DeletedReason: alasan
+  });
+  logAudit({
+    userId: actor.uid, userName: actor.name, role: actor.role,
+    action: 'transaksi.delete', module: 'Barber', targetId: transaksiId,
+    detail: { nomorTransaksi: existing.NomorTransaksi, alasan: alasan }, result: 'Success'
+  });
+  return { success: true };
+}
+
+function restoreTransaksiBarber(transaksiId, actor) {
+  var existing = dbFindByField(SHEET.TRANSAKSI_BARBER, 'TransaksiID', transaksiId);
+  if (!existing) throw createAppError('NOT_FOUND', 'Transaksi tidak ditemukan');
+  if (existing.Deleted !== true) throw createAppError('VALIDATION_ERROR', 'Transaksi ini tidak sedang dihapus.');
+
+  var restored = dbUpdateById(SHEET.TRANSAKSI_BARBER, 'TransaksiID', transaksiId, {
+    Deleted: false, DeletedAt: '', DeletedBy: '', DeletedReason: ''
+  });
+  logAudit({
+    userId: actor.uid, userName: actor.name, role: actor.role,
+    action: 'transaksi.restore', module: 'Barber', targetId: transaksiId,
+    detail: { nomorTransaksi: existing.NomorTransaksi }, result: 'Success'
+  });
+  return parseTransaksiBarberRow_(restored);
+}
+
+// validateTransaksiBarberPayload_ & buildTransaksiBarberEditPatch_ murni
+// (hanya memvalidasi/membentuk bentuk payload, tidak menyentuh Db) -> diekspor
+// untuk Node supaya diuji langsung.
 if (typeof module !== 'undefined') {
   var _validation = require('./Validation.js');
   var assertRequiredFields = _validation.assertRequiredFields;
   var createAppError = _validation.createAppError;
-  module.exports = { validateTransaksiBarberPayload_: validateTransaksiBarberPayload_ };
+  var _utils = require('./Utils.js');
+  var sanitizeString = _utils.sanitizeString;
+  module.exports = {
+    validateTransaksiBarberPayload_: validateTransaksiBarberPayload_,
+    buildTransaksiBarberEditPatch_: buildTransaksiBarberEditPatch_
+  };
 }

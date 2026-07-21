@@ -124,7 +124,7 @@ function parseTransaksiWarkopRow_(row) {
 
 function listTransaksiWarkop(filterOptions) {
   var opts = filterOptions || {};
-  var all = dbGetAll(SHEET.TRANSAKSI_WARKOP);
+  var all = dbGetAll(SHEET.TRANSAKSI_WARKOP, { includeDeleted: !!opts.includeDeleted });
 
   if (opts.filterType) {
     var range = resolveDateRangeFilter(opts.filterType, opts.customStart, opts.customEnd);
@@ -141,9 +141,92 @@ function getTransaksiWarkopById(transaksiId) {
   return parseTransaksiWarkopRow_(row);
 }
 
+/** Field yang boleh diedit Owner/Admin — lihat catatan yang sama di Barber.js. Murni -> diuji lewat Node. */
+function buildTransaksiWarkopEditPatch_(payload) {
+  var patch = {};
+  if (payload.catatan !== undefined) patch.Catatan = sanitizeString(payload.catatan, 500);
+  if (payload.namaPelanggan !== undefined) patch.NamaPelanggan = sanitizeString(payload.namaPelanggan, 150) || 'Pelanggan Umum';
+  return patch;
+}
+
+function updateTransaksiWarkop(transaksiId, payload, actor) {
+  var existing = dbFindByField(SHEET.TRANSAKSI_WARKOP, 'TransaksiID', transaksiId);
+  if (!existing) throw createAppError('NOT_FOUND', 'Transaksi tidak ditemukan');
+  if (existing.Deleted === true) throw createAppError('VALIDATION_ERROR', 'Transaksi yang sudah dihapus tidak bisa diedit. Pulihkan dulu.');
+
+  var patch = buildTransaksiWarkopEditPatch_(payload);
+  patch.UpdatedAt = new Date().toISOString();
+  var updated = dbUpdateById(SHEET.TRANSAKSI_WARKOP, 'TransaksiID', transaksiId, patch);
+  logAudit({
+    userId: actor.uid, userName: actor.name, role: actor.role,
+    action: 'transaksi.update', module: 'Warkop', targetId: transaksiId,
+    detail: { fields: Object.keys(patch) }, result: 'Success'
+  });
+  return parseTransaksiWarkopRow_(updated);
+}
+
+/** Hapus (void) transaksi Warkop — stok tiap item DIKEMBALIKAN karena barang tercatat batal terjual. */
+function deleteTransaksiWarkop(transaksiId, reason, actor) {
+  var existing = dbFindByField(SHEET.TRANSAKSI_WARKOP, 'TransaksiID', transaksiId);
+  if (!existing) throw createAppError('NOT_FOUND', 'Transaksi tidak ditemukan');
+  if (existing.Deleted === true) throw createAppError('VALIDATION_ERROR', 'Transaksi ini sudah dihapus.');
+  var alasan = sanitizeString(reason, 500);
+  if (!alasan) throw createAppError('VALIDATION_ERROR', 'Alasan penghapusan wajib diisi.');
+
+  var items = parseTransaksiWarkopRow_(existing).Items;
+  items.forEach(function (item) { incrementStokProduk_(item.produkId, item.qty); });
+
+  dbUpdateById(SHEET.TRANSAKSI_WARKOP, 'TransaksiID', transaksiId, {
+    Deleted: true, DeletedAt: new Date().toISOString(), DeletedBy: actor.name, DeletedReason: alasan
+  });
+  logAudit({
+    userId: actor.uid, userName: actor.name, role: actor.role,
+    action: 'transaksi.delete', module: 'Warkop', targetId: transaksiId,
+    detail: { nomorTransaksi: existing.NomorTransaksi, alasan: alasan }, result: 'Success'
+  });
+  return { success: true };
+}
+
+/**
+ * Pulihkan transaksi Warkop yang terhapus — stok dipotong LAGI (transaksi
+ * berarti benar-benar terjadi lagi), ditolak all-or-nothing kalau stok
+ * sekarang tidak cukup untuk salah satu item (mis. sudah dipakai transaksi
+ * lain sejak dihapus) supaya Owner harus menyelesaikan konflik itu manual.
+ */
+function restoreTransaksiWarkop(transaksiId, actor) {
+  var existing = dbFindByField(SHEET.TRANSAKSI_WARKOP, 'TransaksiID', transaksiId);
+  if (!existing) throw createAppError('NOT_FOUND', 'Transaksi tidak ditemukan');
+  if (existing.Deleted !== true) throw createAppError('VALIDATION_ERROR', 'Transaksi ini tidak sedang dihapus.');
+
+  var items = parseTransaksiWarkopRow_(existing).Items;
+  items.forEach(function (item) {
+    var produk = dbFindByField(SHEET.PRODUK_WARKOP, 'ProdukID', item.produkId);
+    if (!produk) throw createAppError('VALIDATION_ERROR', 'Menu "' + item.nama + '" sudah tidak ada, tidak bisa memulihkan transaksi ini.');
+    if (Number(produk.Stok) < item.qty) {
+      throw createAppError('VALIDATION_ERROR', 'Stok "' + produk.NamaMenu + '" tidak cukup untuk memulihkan transaksi ini (tersisa ' + produk.Stok + ', butuh ' + item.qty + ').');
+    }
+  });
+  items.forEach(function (item) { decrementStokProduk_(item.produkId, item.qty); });
+
+  var restored = dbUpdateById(SHEET.TRANSAKSI_WARKOP, 'TransaksiID', transaksiId, {
+    Deleted: false, DeletedAt: '', DeletedBy: '', DeletedReason: ''
+  });
+  logAudit({
+    userId: actor.uid, userName: actor.name, role: actor.role,
+    action: 'transaksi.restore', module: 'Warkop', targetId: transaksiId,
+    detail: { nomorTransaksi: existing.NomorTransaksi }, result: 'Success'
+  });
+  return parseTransaksiWarkopRow_(restored);
+}
+
 if (typeof module !== 'undefined') {
   var _validationWarkop = require('./Validation.js');
   var assertRequiredFields = _validationWarkop.assertRequiredFields;
   var createAppError = _validationWarkop.createAppError;
-  module.exports = { validateTransaksiWarkopPayload_: validateTransaksiWarkopPayload_ };
+  var _utilsWarkop = require('./Utils.js');
+  var sanitizeString = _utilsWarkop.sanitizeString;
+  module.exports = {
+    validateTransaksiWarkopPayload_: validateTransaksiWarkopPayload_,
+    buildTransaksiWarkopEditPatch_: buildTransaksiWarkopEditPatch_
+  };
 }

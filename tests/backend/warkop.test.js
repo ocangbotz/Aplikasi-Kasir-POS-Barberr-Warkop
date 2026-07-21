@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { validateTransaksiWarkopPayload_ } = require('../../backend/gas/Warkop.js');
+const { validateTransaksiWarkopPayload_, buildTransaksiWarkopEditPatch_ } = require('../../backend/gas/Warkop.js');
 
 test('validateTransaksiWarkopPayload_ menolak items kosong/tidak ada', () => {
   assert.throws(() => validateTransaksiWarkopPayload_({}), /Field wajib belum diisi: items/, 'items sama sekali tidak dikirim');
@@ -31,4 +31,25 @@ test('validateTransaksiWarkopPayload_ menerima payload split bill tanpa metodeBa
       splitBillPayers: [{ nama: 'Andi', metode: 'Cash', jumlah: 10000 }]
     })
   );
+});
+
+test('buildTransaksiWarkopEditPatch_ hanya menyertakan field yang dikirim & men-sanitize teks', () => {
+  const patch = buildTransaksiWarkopEditPatch_({ catatan: '  Tanpa gula  ' });
+  assert.deepEqual(Object.keys(patch), ['Catatan']);
+  assert.equal(patch.Catatan, 'Tanpa gula');
+});
+
+test('buildTransaksiWarkopEditPatch_ mengabaikan field finansial/item walau dikirim di payload', () => {
+  const patch = buildTransaksiWarkopEditPatch_({
+    catatan: 'ok',
+    grandTotal: 999999,
+    items: [{ produkId: 'PRD-X', qty: 99 }],
+    metodeBayar: 'QRIS'
+  });
+  assert.deepEqual(Object.keys(patch), ['Catatan']);
+});
+
+test('buildTransaksiWarkopEditPatch_ jatuh ke "Pelanggan Umum" kalau namaPelanggan dikosongkan', () => {
+  const patch = buildTransaksiWarkopEditPatch_({ namaPelanggan: '   ' });
+  assert.equal(patch.NamaPelanggan, 'Pelanggan Umum');
 });

@@ -73,3 +73,15 @@ function decrementStokProduk_(produkId, qty) {
   var sisa = Math.max(0, (Number(existing.Stok) || 0) - qty);
   dbUpdateById(SHEET.PRODUK_WARKOP, 'ProdukID', produkId, { Stok: sisa });
 }
+
+/**
+ * Kembalikan stok — dipanggil Warkop.js saat transaksi dihapus (void), karena
+ * barang yang tercatat terjual sebenarnya tidak jadi keluar. `deltaAvailable`
+ * bila diberikan dipakai untuk cek ketersediaan sebelum restore transaksi
+ * (lihat `restoreTransaksiWarkop`) tanpa perlu mengurangi stok dua kali.
+ */
+function incrementStokProduk_(produkId, qty) {
+  var existing = dbFindByField(SHEET.PRODUK_WARKOP, 'ProdukID', produkId);
+  if (!existing) return;
+  dbUpdateById(SHEET.PRODUK_WARKOP, 'ProdukID', produkId, { Stok: (Number(existing.Stok) || 0) + qty });
+}

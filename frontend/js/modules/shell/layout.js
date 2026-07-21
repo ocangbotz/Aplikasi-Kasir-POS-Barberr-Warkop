@@ -49,6 +49,7 @@ const NAV_ITEMS = [
   },
   { path: '/closing-shift', label: 'Closing Shift', icon: '🧮', roles: ['Owner', 'Admin', 'Kasir'] },
   { path: '/payroll', label: 'Gaji Capster', icon: '💰', roles: ['Owner', 'Admin', 'Capster'] },
+  { path: '/laporan', label: 'Laporan', icon: '📈', roles: ['Owner', 'Admin'] },
   { path: '/settings', label: 'Pengaturan', icon: '⚙️', roles: null },
   { path: '/users', label: 'Manajemen User', icon: '👥', roles: ['Owner'] },
   { path: '/audit-log', label: 'Audit Log', icon: '📜', roles: ['Owner', 'Admin'] },

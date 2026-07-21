@@ -56,7 +56,17 @@ commit di tiap fase, lihat `docs/ARCHITECTURE.md` untuk detail):
       dgn upsert per periode (generate ulang tidak duplikat), Capster
       hanya melihat slip miliknya sendiri (read-only). 93 unit test lulus
       + simulasi backend end-to-end + verifikasi browser Playwright penuh.
-- [ ] Fase 8 — Laporan + Owner Panel
+- [x] **Fase 8 — Laporan + Owner Panel**: laporan penjualan & pengeluaran
+      per jenis usaha (Gabungan/Barber/Warkop) dgn rentang tanggal bebas
+      (termasuk Custom Date), export CSV & Excel (.xls, dibuka asli oleh
+      Excel/Sheets/LibreOffice tanpa library biner) + Cetak/Simpan PDF
+      lewat print browser, tiap export tercatat Audit Log; Owner Panel:
+      edit transaksi (nama/HP/capster/catatan, nominal/item TERKUNCI
+      demi integritas rekonsiliasi), hapus (soft-delete + alasan wajib,
+      stok Warkop otomatis dikembalikan) & pulihkan (stok dipotong lagi,
+      ditolak all-or-nothing kalau stok tak cukup), khusus Owner/Admin.
+      102 unit test lulus + simulasi backend end-to-end + verifikasi
+      browser Playwright penuh.
 - [ ] Fase 9 — PWA lanjutan + fitur bonus premium
 - [ ] Fase 10 — Optimasi & Testing menyeluruh
 

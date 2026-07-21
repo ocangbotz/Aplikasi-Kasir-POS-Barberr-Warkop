@@ -33,6 +33,7 @@ import { renderDashboardBarber } from './modules/dashboard/barber.js';
 import { renderDashboardWarkop } from './modules/dashboard/warkop.js';
 import { renderClosingShift } from './modules/closing-shift/index.js';
 import { renderPayroll } from './modules/payroll/index.js';
+import { renderLaporan } from './modules/laporan/index.js';
 
 const ALL_ROLES = ['Owner', 'Admin', 'Kasir', 'Capster'];
 
@@ -77,6 +78,7 @@ function registerRoutes() {
 
   registerRoute('/closing-shift', { render: withShell(renderClosingShift), roles: ['Owner', 'Admin', 'Kasir'], title: 'Closing Shift' });
   registerRoute('/payroll', { render: withShell(renderPayroll), roles: ['Owner', 'Admin', 'Capster'], title: 'Gaji Capster' });
+  registerRoute('/laporan', { render: withShell(renderLaporan), roles: ['Owner', 'Admin'], title: 'Laporan' });
 }
 
 function renderNotFound(container) {

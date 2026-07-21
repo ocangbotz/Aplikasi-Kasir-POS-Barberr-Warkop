@@ -180,17 +180,56 @@ function dispatchAction_(action, token, payload) {
     }
 
     case ACTIONS.TRANSAKSI_LIST: {
-      requirePermission(token, action);
+      var trxListActor = requirePermission(token, action);
       assertRequiredFields(payload, ['jenisUsaha']);
+      var listOpts = {};
+      for (var loKey in payload) listOpts[loKey] = payload[loKey];
+      if (listOpts.includeDeleted && trxListActor.role !== ROLES.OWNER && trxListActor.role !== ROLES.ADMIN) {
+        listOpts.includeDeleted = false;
+      }
       if (payload.jenisUsaha === JENIS_USAHA.BARBER) {
         if (payload.transaksiId) return getTransaksiBarberById(payload.transaksiId);
-        return listTransaksiBarber(payload);
+        return listTransaksiBarber(listOpts);
       }
       if (payload.jenisUsaha === JENIS_USAHA.WARKOP) {
         if (payload.transaksiId) return getTransaksiWarkopById(payload.transaksiId);
-        return listTransaksiWarkop(payload);
+        return listTransaksiWarkop(listOpts);
       }
       throw createAppError('NOT_IMPLEMENTED', 'Transaksi jenis usaha "' + payload.jenisUsaha + '" belum didukung.');
+    }
+
+    case ACTIONS.TRANSAKSI_UPDATE: {
+      var trxUpdateActor = requirePermission(token, action);
+      assertRequiredFields(payload, ['jenisUsaha', 'transaksiId']);
+      if (payload.jenisUsaha === JENIS_USAHA.BARBER) return updateTransaksiBarber(payload.transaksiId, payload, trxUpdateActor);
+      if (payload.jenisUsaha === JENIS_USAHA.WARKOP) return updateTransaksiWarkop(payload.transaksiId, payload, trxUpdateActor);
+      throw createAppError('NOT_IMPLEMENTED', 'Transaksi jenis usaha "' + payload.jenisUsaha + '" belum didukung.');
+    }
+
+    case ACTIONS.TRANSAKSI_DELETE: {
+      var trxDeleteActor = requirePermission(token, action);
+      assertRequiredFields(payload, ['jenisUsaha', 'transaksiId', 'reason']);
+      if (payload.jenisUsaha === JENIS_USAHA.BARBER) return deleteTransaksiBarber(payload.transaksiId, payload.reason, trxDeleteActor);
+      if (payload.jenisUsaha === JENIS_USAHA.WARKOP) return deleteTransaksiWarkop(payload.transaksiId, payload.reason, trxDeleteActor);
+      throw createAppError('NOT_IMPLEMENTED', 'Transaksi jenis usaha "' + payload.jenisUsaha + '" belum didukung.');
+    }
+
+    case ACTIONS.TRANSAKSI_RESTORE: {
+      var trxRestoreActor = requirePermission(token, action);
+      assertRequiredFields(payload, ['jenisUsaha', 'transaksiId']);
+      if (payload.jenisUsaha === JENIS_USAHA.BARBER) return restoreTransaksiBarber(payload.transaksiId, trxRestoreActor);
+      if (payload.jenisUsaha === JENIS_USAHA.WARKOP) return restoreTransaksiWarkop(payload.transaksiId, trxRestoreActor);
+      throw createAppError('NOT_IMPLEMENTED', 'Transaksi jenis usaha "' + payload.jenisUsaha + '" belum didukung.');
+    }
+
+    case ACTIONS.REPORTS_VIEW: {
+      var reportsActor = requirePermission(token, action);
+      return getLaporan(payload, reportsActor);
+    }
+
+    case ACTIONS.REPORTS_EXPORT: {
+      var reportsExportActor = requirePermission(token, action);
+      return logReportExport(payload, reportsExportActor);
     }
 
     case ACTIONS.PENGELUARAN_CREATE: {

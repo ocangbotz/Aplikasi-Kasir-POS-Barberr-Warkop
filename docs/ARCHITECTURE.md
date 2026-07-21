@@ -560,3 +560,106 @@ badge "Pas" tampil → riwayat shift → Owner reopen → generate & regenerate
 payroll (upsert terverifikasi lewat jumlah baris tabel tetap 1) → Kasir
 melihat menu Closing Shift tapi tidak Gaji Capster (dan sebaliknya untuk
 Capster) — nol error console.
+
+## 14. Laporan & Owner Panel (Fase 8)
+
+### Laporan menggunakan rentang tanggal bebas, bukan kartu tetap
+Berbeda dari Dashboard (§12, kartu Hari Ini/Bulan Ini tetap + Periode
+Terpilih), Laporan HANYA punya satu rentang aktif (default filter
+`month`) yang bisa diarahkan ke tanggal berapa pun termasuk Custom Date —
+sesuai maksud modul Laporan sebagai alat audit/rekap historis, bukan
+ringkasan real-time. `getLaporan` (`Reports.js`, GAS-only) hanya fetch +
+gabung + label `JenisUsaha` per baris, seluruh matematikanya dipakai
+ulang dari `Aggregate.js` (`computeRevenueStats`, `computePaymentMethodBreakdown`)
+dan helper fetch* yang sama dengan `Dashboard.js` (Fase 6) — tidak ada
+logika agregasi baru yang perlu diuji ulang, cukup diverifikasi lewat
+simulasi backend bahwa Laporan Barber + Laporan Warkop = Laporan
+Gabungan, dan totalnya konsisten dengan Dashboard untuk rentang yang
+sama.
+
+### Export PDF/Excel/CSV — pilihan implementasi yang jujur, bukan pura-pura
+Spesifikasi minta export PDF/Excel/CSV/print. Keputusan desain:
+- **CSV**: dibentuk murni di browser (`core/export.js#toCsv`, diuji
+  lewat Node) lalu di-download sebagai Blob — nyata, tidak butuh
+  pemrosesan server.
+- **Excel**: dibentuk sebagai tabel HTML bermimetype `.xls`
+  (`toExcelHtml`) — teknik standar yang benar-benar dibuka Excel/Google
+  Sheets/LibreOffice sebagai spreadsheet asli, TANPA perlu vendor
+  library biner xlsx yang berat (konsisten dengan prinsip "vendor lokal
+  hanya kalau perlu" yang sudah dipakai untuk Chart.js).
+- **PDF/Cetak**: satu tombol "Cetak / Simpan PDF" yang memicu
+  `window.print()` ke `#laporan-print-area` (CSS `@media print` yang
+  sama dipakai struk, digeneralisasi untuk 2 area cetak sekaligus) —
+  hampir semua browser modern punya tujuan cetak "Simpan sebagai PDF"
+  bawaan, jadi ini export PDF yang sungguhan berfungsi tanpa perlu
+  vendor library PDF terpisah.
+
+Setiap export (format apa pun) memanggil `reports.export` (fire-and-forget,
+kegagalannya tidak membatalkan file yang sudah ter-download) yang murni
+mencatat ke Audit Log siapa mengekspor laporan apa kapan — akuntabilitas
+nyata untuk Owner Panel, bukan sekadar tombol dekoratif.
+
+### Owner Panel: edit transaksi dibatasi field non-finansial, sengaja
+`buildTransaksiBarberEditPatch_`/`buildTransaksiWarkopEditPatch_`
+(`Barber.js`/`Warkop.js`, murni & diuji lewat Node) HANYA mengizinkan
+Catatan, NamaPelanggan, NoHP, dan (khusus Barber) koreksi Capster —
+field lain di payload (grandTotal, items, metodeBayar, dst.) diam-diam
+DIABAIKAN walau dikirim. Ini bukan keterbatasan teknis melainkan
+keputusan integritas data: nominal transaksi sudah ikut dihitung di
+rekonsiliasi Closing Shift (§13, kalau shift-nya sudah ditutup) dan
+agregat Dashboard/Laporan yang sudah "dilihat" pengguna sebelumnya —
+mengizinkan edit nominal retroaktif bisa diam-diam merusak angka yang
+sudah terkunci di masa lalu tanpa jejak yang jelas. Koreksi nominal/item
+dilakukan lewat Hapus + transaksi baru (jejaknya eksplisit di Audit Log
+& `DeletedReason`), bukan edit di tempat. Koreksi Capster dikecualikan
+dari pembatasan ini karena tidak mengubah nominal apa pun — hanya
+atribusi siapa yang mengerjakan (penting karena Gaji Capster dihitung
+dari atribusi ini).
+
+### Hapus transaksi = soft-delete + alasan wajib + reversibel
+`deleteTransaksiBarber`/`deleteTransaksiWarkop` menolak permintaan tanpa
+`reason` (disimpan ke kolom baru `DeletedReason`), dan hanya mengubah flag
+`Deleted`/`DeletedAt`/`DeletedBy` (pola soft-delete yang sudah ada sejak
+Fase 1) — baris fisik tidak pernah hilang. Karena `dbGetAll` secara
+default mengecualikan baris `Deleted`, penghapusan otomatis "menghilang"
+dari Dashboard/Laporan/rekonsiliasi shift yang BELUM ditutup tanpa kode
+tambahan; shift yang SUDAH ditutup tetap mempertahankan angka historisnya
+(lihat §13) sampai Owner sengaja membuka kembali. `transaksi.list` hanya
+mengembalikan baris terhapus kalau diminta eksplisit (`includeDeleted`)
+DAN pemintanya Owner/Admin — kalau Kasir mengirim `includeDeleted: true`,
+`Code.js` diam-diam memaksanya `false` (fail-closed di server, tidak
+mengandalkan frontend menyembunyikan checkbox saja).
+
+### Hapus/pulihkan transaksi Warkop ikut mengoreksi stok, all-or-nothing
+Karena Produk Warkop otomatis berkurang saat transaksi dibuat (Fase 4),
+menghapus (void) transaksi Warkop yang salah SENGAJA mengembalikan stok
+tiap item (`incrementStokProduk_`, `Produk.js`) — kalau tidak, stok akan
+diam-diam "hilang" untuk barang yang sebenarnya tidak jadi terjual.
+Memulihkan transaksi memotong stok LAGI, tapi divalidasi all-or-nothing
+DULU untuk semua item sebelum memotong satu pun — kalau salah satu menu
+sudah kehabisan stok sejak dihapus (terjual ke transaksi lain), seluruh
+restore ditolak dengan pesan jelas, bukan memotong sebagian item lalu
+gagal di tengah jalan meninggalkan data setengah-konsisten.
+
+### Testing Fase 8
+Unit test murni: `buildTransaksiBarberEditPatch_`/
+`buildTransaksiWarkopEditPatch_` (memverifikasi field finansial diam-diam
+diabaikan meski dikirim), `core/export.js#toCsv`/`toExcelHtml` (escaping
+koma/kutip/baris baru CSV, escaping HTML). Simulasi backend end-to-end:
+Laporan Gabungan = Laporan Barber + Laporan Warkop, konsisten dengan
+Dashboard untuk rentang sama, RBAC Kasir dilarang akses Laporan, export
+tercatat Audit Log, Kasir dilarang edit/hapus transaksi, edit
+mengoreksi nama/HP/capster TANPA mengubah GrandTotal/Items walau
+dipaksa lewat payload, hapus tanpa alasan ditolak, transaksi terhapus
+hilang dari listing biasa & Laporan tapi muncul dgn `includeDeleted`
+(Owner/Admin saja, Kasir dipaksa `false`), hapus Warkop mengembalikan
+stok tepat per item, restore memotong stok lagi, restore ditolak
+all-or-nothing kalau stok tidak cukup. Verifikasi browser Playwright
+penuh: Laporan menampilkan ringkasan & tabel yang benar per jenis usaha,
+tombol Export CSV/Excel benar-benar memicu download file dgn ekstensi
+yang sesuai, modal Edit Owner Panel mengubah data, Hapus lewat dialog
+alasan + konfirmasi menyembunyikan baris, checkbox "Termasuk yang
+dihapus" memunculkannya kembali dgn badge, Pulihkan mengembalikan baris
+ke normal, hapus transaksi Warkop lewat UI benar-benar mengembalikan
+stok, dan Kasir terbukti tidak melihat menu Laporan maupun tombol
+Edit/Hapus/checkbox Owner Panel di Riwayat — nol error console.
