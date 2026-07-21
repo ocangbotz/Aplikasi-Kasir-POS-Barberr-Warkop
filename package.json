@@ -1,0 +1,32 @@
+{
+  "name": "kasir-barber-warkop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplikasi Kasir (POS) untuk Barber & Warkop - HTML5, TailwindCSS, Vanilla JS, Google Apps Script + Google Sheets",
+  "scripts": {
+    "test:backend": "node backend/test/run-tests.js",
+    "build:css": "tailwindcss -i frontend/src/css/input.css -o frontend/assets/css/app.css --minify",
+    "watch:css": "tailwindcss -i frontend/src/css/input.css -o frontend/assets/css/app.css --watch",
+    "dev:server": "node backend/test/devServer.js",
+    "test:e2e": "node backend/test/e2e/run.js",
+    "test:e2e:barber": "node backend/test/e2e/barber.js",
+    "test:e2e:warkop": "node backend/test/e2e/warkop.js",
+    "test:e2e:inventory": "node backend/test/e2e/inventory.js",
+    "test:e2e:dashboard": "node backend/test/e2e/dashboard.js",
+    "test:e2e:owner-panel": "node backend/test/e2e/owner-panel.js",
+    "test:e2e:laporan": "node backend/test/e2e/laporan.js",
+    "sync:vendor": "cp node_modules/chart.js/dist/chart.umd.min.js frontend/assets/js/vendor/chart.umd.min.js && cp node_modules/jspdf/dist/jspdf.umd.min.js frontend/assets/js/vendor/jspdf.umd.min.js && cp node_modules/jspdf-autotable/dist/jspdf.plugin.autotable.min.js frontend/assets/js/vendor/jspdf.plugin.autotable.min.js",
+    "build:sw": "node scripts/gen-sw.js",
+    "test:e2e:pwa": "node backend/test/e2e/pwa.js",
+    "test:perf": "node backend/test/perf-scale.js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "chart.js": "^4.5.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "playwright": "^1.61.1",
+    "tailwindcss": "^4.3.3"
+  }
+}
