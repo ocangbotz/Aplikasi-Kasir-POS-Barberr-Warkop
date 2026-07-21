@@ -16,7 +16,7 @@ export const APP_CONFIG = {
   // deploy ke Google. Di produksi, ganti baris di bawah `REPLACE_...`.
   API_BASE_URL: isLocalDev
     ? '/api'
-    : 'REPLACE_WITH_YOUR_APPS_SCRIPT_WEB_APP_URL',
+    : 'https://script.google.com/macros/s/AKfycbxwpFq6yoxj6PT-3-hN4_RoKzdCcX7ZC0F9sNwrr0LBLhd7FxHpnwrpk2Krx4ErUW7Y/exec',
 
   SESSION_TTL_HOURS: 12
 };
