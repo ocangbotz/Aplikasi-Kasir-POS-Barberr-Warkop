@@ -12,7 +12,8 @@ const { createMockGas } = require('./mockGas');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const FILES_IN_ORDER = [
-  'Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Code.gs', 'SetupDatabase.gs'
+  'Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Pelanggan.gs', 'Settings.gs',
+  'Barber.gs', 'Code.gs', 'SetupDatabase.gs'
 ];
 
 function loadContext() {
@@ -162,6 +163,154 @@ test('changePassword: tolak password lama salah, terima jika benar & login pakai
   const loginResult = ctx.authLogin_({ username: 'owner', password: 'passwordBaru123' });
   assert.ok(loginResult.token);
   assertThrowsCode(() => ctx.authLogin_({ username: 'owner', password: ownerCreds.password }), 'AUTH_INVALID');
+});
+
+// --- Modul Barber ---
+let layananGunting, layananCukurJenggot, capsterBudi;
+
+test('Owner bisa membuat layanan barber baru', () => {
+  layananGunting = ctx.barberSaveLayanan_({ token: ownerToken, nama: 'Potong Rambut', harga: 25000, durasi: 30 }).layanan;
+  layananCukurJenggot = ctx.barberSaveLayanan_({ token: ownerToken, nama: 'Cukur Jenggot', harga: 15000, durasi: 15 }).layanan;
+  assert.ok(layananGunting.ID);
+  assert.strictEqual(layananGunting.Harga, 25000);
+});
+
+test('Layanan dengan harga <= 0 ditolak', () => {
+  assertThrowsCode(() => ctx.barberSaveLayanan_({ token: ownerToken, nama: 'Gratis', harga: 0 }), 'VALIDATION_ERROR');
+});
+
+test('barberListLayanan_ hanya mengembalikan layanan aktif untuk user biasa', () => {
+  ctx.barberSaveLayanan_({ token: ownerToken, id: layananCukurJenggot.ID, nama: 'Cukur Jenggot', harga: 15000, statusAktif: false });
+  const activeOnly = ctx.barberListLayanan_({ token: ownerToken }).layanan;
+  assert.ok(!activeOnly.some((l) => l.ID === layananCukurJenggot.ID));
+  const withInactive = ctx.barberListLayanan_({ token: ownerToken, includeInactive: true }).layanan;
+  assert.ok(withInactive.some((l) => l.ID === layananCukurJenggot.ID));
+});
+
+test('Owner bisa membuat data capster baru', () => {
+  capsterBudi = ctx.barberSaveCapster_({ token: ownerToken, nama: 'Budi', noHp: '081211112222', persentaseBagiHasil: 45 }).capster;
+  assert.ok(capsterBudi.ID);
+  assert.strictEqual(capsterBudi.Status, 'Aktif');
+});
+
+test('Persentase bagi hasil capster di luar 0-100 ditolak', () => {
+  assertThrowsCode(() => ctx.barberSaveCapster_({ token: ownerToken, nama: 'X', persentaseBagiHasil: 150 }), 'VALIDATION_ERROR');
+});
+
+// Buat akun Kasir untuk menguji permission (Kasir dilarang kelolaLayananProduk/kelolaCapster).
+let kasirToken;
+test('Setup akun Kasir untuk uji permission', () => {
+  const salt = ctx.generateSalt_();
+  ctx.appendRowObject_(ctx.SHEETS.KASIR, {
+    ID: ctx.generateId_('USR'), Nama: 'Siti Kasir', Username: 'siti', Role: 'Kasir',
+    PasswordHash: ctx.hashPassword_('kasir12345', salt), PasswordSalt: salt,
+    CapsterID: '', Status: 'Aktif', CreatedAt: new Date(), UpdatedAt: new Date()
+  });
+  kasirToken = ctx.authLogin_({ username: 'siti', password: 'kasir12345' }).token;
+  assert.ok(kasirToken);
+});
+
+test('Kasir dilarang membuat/mengubah layanan & capster', () => {
+  assertThrowsCode(() => ctx.barberSaveLayanan_({ token: kasirToken, nama: 'X', harga: 1000 }), 'FORBIDDEN');
+  assertThrowsCode(() => ctx.barberSaveCapster_({ token: kasirToken, nama: 'X', persentaseBagiHasil: 10 }), 'FORBIDDEN');
+});
+
+test('Kasir bisa membuat transaksi barber; subtotal/diskon/grand total dihitung benar', () => {
+  const result = ctx.barberCreateTransaksi_({
+    token: kasirToken,
+    namaPelanggan: 'Andi',
+    noHp: '081234567890',
+    capsterId: capsterBudi.ID,
+    layanan: [
+      { layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }
+    ],
+    diskon: 5000,
+    metodePembayaran: 'Cash'
+  }).transaksi;
+
+  assert.strictEqual(result.Subtotal, 25000);
+  assert.strictEqual(result.Diskon, 5000);
+  assert.strictEqual(result.GrandTotal, 20000);
+  assert.strictEqual(result.Status, 'Selesai');
+  assert.ok(result.NomorTransaksi.startsWith('BRB-'));
+  assert.ok(Array.isArray(result.Layanan) && result.Layanan.length === 1);
+});
+
+test('Transaksi baru otomatis membuat profil pelanggan & poin loyalti', () => {
+  const found = ctx.findPelangganByPhone_('081234567890');
+  assert.ok(found);
+  assert.strictEqual(found.Nama, 'Andi');
+  assert.strictEqual(found.TotalKunjungan, 1);
+  assert.strictEqual(found.TotalPengeluaran, 20000);
+  assert.strictEqual(found.PoinLoyalti, Math.floor(20000 / ctx.APP_CONFIG.LOYALTY_RUPIAH_PER_POINT));
+});
+
+test('Transaksi kedua dari pelanggan yang sama menambah (bukan menimpa) statistik kunjungan', () => {
+  ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Andi', noHp: '081234567890', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'QRIS'
+  });
+  const found = ctx.findPelangganByPhone_('081234567890');
+  assert.strictEqual(found.TotalKunjungan, 2);
+  assert.strictEqual(found.TotalPengeluaran, 45000);
+});
+
+test('Nomor transaksi berurutan pada tanggal yang sama', () => {
+  const t3 = ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Citra', noHp: '081200000001', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Cash'
+  }).transaksi;
+  assert.ok(t3.NomorTransaksi.endsWith('-0003'));
+});
+
+test('Transaksi tanpa layanan ditolak', () => {
+  assertThrowsCode(() => ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Kosong', noHp: '0800000', capsterId: capsterBudi.ID,
+    layanan: [], metodePembayaran: 'Cash'
+  }), 'VALIDATION_ERROR');
+});
+
+test('Transaksi dengan metode pembayaran tidak valid ditolak', () => {
+  assertThrowsCode(() => ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Andi', noHp: '081234567890', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Transfer Bank'
+  }), 'VALIDATION_ERROR');
+});
+
+test('barberListTransaksi_ memfilter berdasarkan tanggal & mendukung pagination', () => {
+  const today = ctx.todayDateString_();
+  const result = ctx.barberListTransaksi_({ token: kasirToken, startDate: today, endDate: today, page: 1, pageSize: 2 });
+  assert.strictEqual(result.pageSize, 2);
+  assert.ok(result.total >= 3);
+  assert.strictEqual(result.transaksi.length, 2);
+});
+
+test('barberGetTransaksi_ mengembalikan detail transaksi lengkap dengan Layanan ter-parse', () => {
+  const list = ctx.barberListTransaksi_({ token: kasirToken, page: 1, pageSize: 1 }).transaksi;
+  const detail = ctx.barberGetTransaksi_({ token: kasirToken, id: list[0].ID }).transaksi;
+  assert.ok(Array.isArray(detail.Layanan));
+});
+
+test('searchPelanggan_ menemukan pelanggan lewat nama maupun nomor HP', () => {
+  const byName = ctx.searchPelanggan_({ token: kasirToken, query: 'Andi' }).pelanggan;
+  assert.ok(byName.some((p) => p.NoHP === '081234567890'));
+  const byPhone = ctx.searchPelanggan_({ token: kasirToken, query: '081234567890' }).pelanggan;
+  assert.ok(byPhone.length >= 1);
+});
+
+// --- Settings ---
+test('getSettings_ mengembalikan default settings sebagai object key-value', () => {
+  const settings = ctx.getSettings_({ token: kasirToken }).settings;
+  assert.strictEqual(settings.nama_usaha, 'Barber & Warkop');
+});
+
+test('Kasir dilarang mengubah settings, Owner boleh', () => {
+  assertThrowsCode(() => ctx.updateSettings_({ token: kasirToken, values: { nama_usaha: 'Hack' } }), 'FORBIDDEN');
+  const updated = ctx.updateSettings_({ token: ownerToken, values: { nama_usaha: 'Barbershop Jaya' } }).settings;
+  assert.strictEqual(updated.nama_usaha, 'Barbershop Jaya');
 });
 
 // --- Utils ---

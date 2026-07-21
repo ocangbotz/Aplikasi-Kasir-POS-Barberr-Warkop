@@ -12,9 +12,18 @@ import { registerNavItem } from './core/nav.js';
 import { renderLogin } from './pages/login.js';
 import { renderLayout } from './pages/layout.js';
 import { renderHome } from './pages/home.js';
+import { renderBarberTransaksi } from './pages/barber/transaksi.js';
+import { renderBarberRiwayat } from './pages/barber/riwayat.js';
+import { renderBarberLayanan } from './pages/barber/layanan.js';
+import { renderBarberCapster } from './pages/barber/capster.js';
 
 registerRoute('/login', { public: true, title: 'Masuk', render: renderLogin });
 registerRoute('/', { title: 'Beranda', render: renderHome });
+
+registerRoute('/barber/transaksi', { permission: 'transaksiBarber', title: 'Transaksi Barber', render: renderBarberTransaksi });
+registerRoute('/barber/riwayat', { permission: 'transaksiBarber', title: 'Riwayat Barber', render: renderBarberRiwayat });
+registerRoute('/barber/layanan', { permission: 'kelolaLayananProduk', title: 'Layanan Barber', render: renderBarberLayanan });
+registerRoute('/barber/capster', { permission: 'kelolaCapster', title: 'Data Capster', render: renderBarberCapster });
 registerRoute('/404', {
   public: true,
   title: 'Halaman Tidak Ditemukan',
@@ -38,6 +47,10 @@ registerRoute('/403', {
 });
 
 registerNavItem({ path: '/', label: 'Beranda', icon: '🏠' });
+registerNavItem({ path: '/barber/transaksi', label: 'Transaksi', icon: '💈', permission: 'transaksiBarber', group: 'Barber' });
+registerNavItem({ path: '/barber/riwayat', label: 'Riwayat', icon: '🧾', permission: 'transaksiBarber', group: 'Barber' });
+registerNavItem({ path: '/barber/layanan', label: 'Layanan', icon: '✂️', permission: 'kelolaLayananProduk', group: 'Barber' });
+registerNavItem({ path: '/barber/capster', label: 'Capster', icon: '🧑‍🔧', permission: 'kelolaCapster', group: 'Barber' });
 
 const appEl = document.getElementById('app');
 let currentShellMode = null; // 'guest' | 'app'

@@ -16,7 +16,7 @@ berikutnya (lihat `docs/`).
 |---|---|---|
 | 1 | Project scaffold, backend Apps Script, skema 15-sheet database | ✅ Selesai |
 | 2 | Frontend foundation (shell, auth, routing, dark mode) | ✅ Selesai |
-| 3 | Modul Barber (transaksi, layanan, capster, struk) | ⏳ |
+| 3 | Modul Barber (transaksi, layanan, capster, struk) | ✅ Selesai |
 | 4 | Modul Warkop (menu, pesanan, split bill, struk) | ⏳ |
 | 5 | Inventory Barber & Warkop + notifikasi stok | ⏳ |
 | 6 | Dashboard Gabungan/Barber/Warkop + grafik + filter | ⏳ |
@@ -40,13 +40,15 @@ docs/             Panduan instalasi & deployment per fase
 
 1. **Backend & Database** → ikuti [`docs/01-SETUP-BACKEND.md`](docs/01-SETUP-BACKEND.md)
 2. **Frontend** → ikuti [`docs/02-FRONTEND.md`](docs/02-FRONTEND.md)
-3. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
+3. **Modul Barber** → lihat [`docs/03-MODUL-BARBER.md`](docs/03-MODUL-BARBER.md)
+4. Fase-fase berikutnya akan menambah `docs/0N-....md` masing-masing.
 
 ## Menjalankan Test
 
 ```bash
 npm install
-npm run test:backend   # unit test logika backend (mock GAS runtime)
-npm run build:css      # build Tailwind sebelum test:e2e
-npm run test:e2e       # end-to-end di Chromium sungguhan (Playwright)
+npm run test:backend       # unit test logika backend (mock GAS runtime)
+npm run build:css          # build Tailwind sebelum test:e2e
+npm run test:e2e           # e2e shell aplikasi (auth, tema, dll) di Chromium
+npm run test:e2e:barber    # e2e Modul Barber (POS, layanan, capster, struk)
 ```

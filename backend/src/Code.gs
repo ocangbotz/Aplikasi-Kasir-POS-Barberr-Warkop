@@ -20,7 +20,20 @@ var ROUTES = {
   getMe: function (p) { return authGetMe_(p); },
   changePassword: function (p) { return authChangePassword_(p); },
 
-  auditLogList: function (p) { return auditLogList_(p); }
+  auditLogList: function (p) { return auditLogList_(p); },
+
+  getSettings: function (p) { return getSettings_(p); },
+  updateSettings: function (p) { return updateSettings_(p); },
+
+  searchPelanggan: function (p) { return searchPelanggan_(p); },
+
+  barberListLayanan: function (p) { return barberListLayanan_(p); },
+  barberSaveLayanan: function (p) { return barberSaveLayanan_(p); },
+  barberListCapster: function (p) { return barberListCapster_(p); },
+  barberSaveCapster: function (p) { return barberSaveCapster_(p); },
+  barberCreateTransaksi: function (p) { return barberCreateTransaksi_(p); },
+  barberListTransaksi: function (p) { return barberListTransaksi_(p); },
+  barberGetTransaksi: function (p) { return barberGetTransaksi_(p); }
 };
 
 function doGet(e) {

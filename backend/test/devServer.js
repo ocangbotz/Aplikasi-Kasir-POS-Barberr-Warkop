@@ -19,7 +19,10 @@ const vm = require('vm');
 const { createMockGas } = require('./mockGas');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
-const FILES_IN_ORDER = ['Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Code.gs', 'SetupDatabase.gs'];
+const FILES_IN_ORDER = [
+  'Config.gs', 'Utils.gs', 'Auth.gs', 'AuditLog.gs', 'Pelanggan.gs', 'Settings.gs',
+  'Barber.gs', 'Code.gs', 'SetupDatabase.gs'
+];
 const FRONTEND_DIR = path.join(__dirname, '..', '..', 'frontend');
 
 function loadContext() {

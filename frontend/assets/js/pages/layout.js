@@ -4,7 +4,7 @@
  * Dirender SEKALI per sesi login (lihat assets/js/app.js) -- router hanya
  * mengganti isi <main>, sehingga navigasi antar halaman tidak flicker.
  */
-import { getCurrentUser, logout } from '../core/auth.js';
+import { getCurrentUser, hasPermission, logout } from '../core/auth.js';
 import { getNavItems } from '../core/nav.js';
 import { currentPath, navigate } from '../core/router.js';
 import { themeStore, toggleTheme } from '../core/theme.js';
@@ -18,6 +18,20 @@ function navLinkHtml(item) {
     </a>`;
 }
 
+/** Render nav-list dengan judul grup (mis. "Barber") jika item.group berbeda dari item sebelumnya. */
+function navListHtml(items) {
+  let lastGroup;
+  let html = '';
+  items.forEach((item) => {
+    if (item.group && item.group !== lastGroup) {
+      html += `<p class="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 first:mt-0">${item.group}</p>`;
+    }
+    html += navLinkHtml(item);
+    lastGroup = item.group;
+  });
+  return html;
+}
+
 function themeIcon(mode) {
   if (mode === 'dark') return '🌙';
   if (mode === 'light') return '☀️';
@@ -26,7 +40,7 @@ function themeIcon(mode) {
 
 export function renderLayout(root) {
   const user = getCurrentUser();
-  const items = getNavItems();
+  const items = getNavItems().filter((item) => !item.permission || hasPermission(item.permission));
 
   root.innerHTML = `
     <div class="min-h-screen lg:flex">
@@ -40,7 +54,7 @@ export function renderLayout(root) {
           </div>
         </div>
         <nav id="nav-list" class="space-y-1">
-          ${items.map(navLinkHtml).join('')}
+          ${navListHtml(items)}
         </nav>
       </aside>
 

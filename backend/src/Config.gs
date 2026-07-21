@@ -9,7 +9,9 @@ var APP_CONFIG = {
   VERSION: '1.0.0',
   TIMEZONE: 'Asia/Jakarta',
   SESSION_TTL_HOURS: 12,
-  DEFAULT_LOW_STOCK_THRESHOLD: 5
+  DEFAULT_LOW_STOCK_THRESHOLD: 5,
+  // 1 poin loyalti didapat tiap kelipatan belanja segini (Rupiah).
+  LOYALTY_RUPIAH_PER_POINT: 10000
 };
 
 // Nama-nama sheet -- HARUS sinkron dengan SetupDatabase.gs
@@ -46,22 +48,22 @@ var PERMISSIONS = {
   Admin: {
     dashboard: true, transaksiBarber: true, transaksiWarkop: true,
     inventory: true, pelanggan: true, pengeluaran: true, closingShift: true,
-    gajiCapster: true, laporan: true, kelolaLayananProduk: true,
-    auditLog: true, kelolaUser: false, backupRestore: false,
+    gajiCapster: true, laporan: true, kelolaLayananProduk: true, kelolaCapster: true,
+    kelolaSettings: false, auditLog: true, kelolaUser: false, backupRestore: false,
     editTransaksi: true, hapusTransaksi: false, reopenShift: true
   },
   Kasir: {
     dashboard: true, transaksiBarber: true, transaksiWarkop: true,
     inventory: false, pelanggan: true, pengeluaran: true, closingShift: true,
-    gajiCapster: false, laporan: true, kelolaLayananProduk: false,
-    auditLog: false, kelolaUser: false, backupRestore: false,
+    gajiCapster: false, laporan: true, kelolaLayananProduk: false, kelolaCapster: false,
+    kelolaSettings: false, auditLog: false, kelolaUser: false, backupRestore: false,
     editTransaksi: false, hapusTransaksi: false, reopenShift: false
   },
   Capster: {
     dashboard: true, transaksiBarber: true, transaksiWarkop: false,
     inventory: false, pelanggan: true, pengeluaran: false, closingShift: false,
-    gajiCapster: false, laporan: false, kelolaLayananProduk: false,
-    auditLog: false, kelolaUser: false, backupRestore: false,
+    gajiCapster: false, laporan: false, kelolaLayananProduk: false, kelolaCapster: false,
+    kelolaSettings: false, auditLog: false, kelolaUser: false, backupRestore: false,
     editTransaksi: false, hapusTransaksi: false, reopenShift: false
   }
 };

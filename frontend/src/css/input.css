@@ -84,4 +84,26 @@
   .nav-link.active {
     @apply bg-slate-900 text-white dark:bg-white dark:text-slate-900;
   }
+
+  /* State "terpilih" untuk tombol toggle (mis. metode pembayaran Cash/QRIS). */
+  .option-btn.selected {
+    @apply border-barber-600 bg-barber-600 text-white hover:bg-barber-600 dark:border-barber-600;
+  }
 }
+
+/* Cetak struk: sembunyikan semua isi halaman kecuali area struk. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #struk-print-area, #struk-print-area * {
+    visibility: visible;
+  }
+  #struk-print-area {
+    position: absolute;
+    inset: 0;
+    width: 80mm;
+    margin: 0 auto;
+  }
+}
+
