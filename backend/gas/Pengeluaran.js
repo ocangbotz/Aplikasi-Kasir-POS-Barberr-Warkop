@@ -45,7 +45,7 @@ function createPengeluaran(payload, actor) {
     Keterangan: sanitizeString(payload.keterangan, 500),
     FotoNotaUrl: fotoUrl,
     InputOleh: actor.name,
-    ShiftID: '',
+    ShiftID: activeShiftId_(actor),
     CreatedAt: new Date().toISOString(),
     Deleted: false
   };

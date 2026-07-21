@@ -231,6 +231,49 @@ function dispatchAction_(action, token, payload) {
       return createInventoryItem(payload.jenisUsaha, payload, inventoryActor);
     }
 
+    case ACTIONS.SHIFT_OPEN: {
+      var openActor = requirePermission(token, action);
+      return openShift(payload, openActor);
+    }
+
+    case ACTIONS.SHIFT_CLOSE: {
+      var closeActor = requirePermission(token, action);
+      var targetShiftId = payload.shiftId;
+      if (!targetShiftId) {
+        var myOpen = getOpenShiftForKasir(closeActor.uid);
+        if (!myOpen) throw createAppError('NOT_FOUND', 'Anda tidak memiliki shift yang sedang terbuka.');
+        targetShiftId = myOpen.ShiftID;
+      }
+      return closeShift(targetShiftId, payload, closeActor);
+    }
+
+    case ACTIONS.SHIFT_REOPEN: {
+      var reopenActor = requirePermission(token, action);
+      assertRequiredFields(payload, ['shiftId']);
+      return reopenShift(payload.shiftId, payload.reason, reopenActor);
+    }
+
+    case ACTIONS.SHIFT_VIEW: {
+      var viewShiftActor = requirePermission(token, action);
+      if (payload.preview) return previewOpenShift(viewShiftActor);
+      if (payload.myOpenShift) return getMyOpenShift(viewShiftActor);
+      var shiftFilter = {};
+      for (var sfKey in payload) shiftFilter[sfKey] = payload[sfKey];
+      if (viewShiftActor.role === ROLES.KASIR) shiftFilter.kasirId = viewShiftActor.uid;
+      return listShifts(shiftFilter);
+    }
+
+    case ACTIONS.PAYROLL_GENERATE: {
+      var payrollGenActor = requirePermission(token, action);
+      return generateGajiCapster(payload, payrollGenActor);
+    }
+
+    case ACTIONS.PAYROLL_VIEW_ALL:
+    case ACTIONS.PAYROLL_VIEW_SELF: {
+      var payrollViewActor = requirePermission(token, action);
+      return listGajiCapster(payload, payrollViewActor);
+    }
+
     default:
       throw createAppError('UNKNOWN_ACTION', 'Aksi tidak dikenal: ' + action);
   }

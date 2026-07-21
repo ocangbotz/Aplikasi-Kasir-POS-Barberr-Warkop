@@ -484,3 +484,79 @@ untuk ketiga dashboard: kartu menampilkan angka yang benar, Chart.js
 ter-lazy-load & ter-render (canvas + `window.Chart` tersedia), filter
 Custom Date memunculkan input tanggal, dan Capster terbukti tidak melihat
 menu Dashboard sama sekali di sidebar — nol error console.
+
+## 13. Closing Shift & Gaji Capster (Fase 7)
+
+### Penandaan transaksi/pengeluaran ke shift aktif
+Setiap kali Kasir membuat transaksi (Barber/Warkop) atau mencatat
+pengeluaran, `ShiftID`-nya otomatis diisi lewat helper
+`activeShiftId_(actor)` (`ClosingShift.js`) yang mencari shift berstatus
+`Open` milik kasir tsb — bukan sekadar mencocokkan rentang tanggal. Ini
+memastikan Tutup Kas menghitung PERSIS transaksi yang terjadi selama
+shift itu berjalan, termasuk kalau kasir shift malam menutup lewat tengah
+malam (rentang tanggal kalender akan salah, tapi ShiftID tetap benar).
+Kasir hanya boleh punya 1 shift `Open` di satu waktu — `openShift`
+menolak permintaan buka shift baru selama masih ada yang belum ditutup.
+
+### Formula rekonsiliasi kas fisik
+```
+TotalSistem = SaldoAwal + CashBarber + CashWarkop - PengeluaranBarber - PengeluaranWarkop
+Selisih     = UangFisik - TotalSistem
+```
+QRIS sengaja TIDAK masuk formula karena tidak menyentuh kas fisik di
+laci — dipisah sebagai info (`QrisBarber`/`QrisWarkop`) untuk verifikasi
+silang, bukan komponen penghitungan selisih. `computeShiftReconciliation_`
+murni dan diuji lewat Node (`tests/backend/closing-shift.test.js`).
+Frontend menampilkan estimasi (`shift.view` dgn `preview: true`, memanggil
+`previewOpenShift`) SEBELUM kasir mengisi Uang Fisik, supaya kasir bisa
+menghitung laci lalu membandingkan — bukan menebak buta.
+
+### Kunci & buka-kembali shift
+Shift berstatus `Closed` terkunci: `closeShift` menolak penutupan ganda,
+dan hanya Owner/Admin yang boleh `reopenShift` (dicatat `ReopenedBy`/
+`ReopenedAt`/`ReopenReason` + Audit Log) — Kasir sendiri tidak bisa
+membuka kembali shift yang sudah ditutup, sesuai RBAC matrix di §1.
+Frontend menyembunyikan tombol "Buka Kembali" sepenuhnya dari Kasir
+(bukan cuma disabled) di halaman Closing Shift.
+
+### Gaji Capster: upsert per (Capster, Periode), bukan insert selalu
+`generateGajiCapster` meng-upsert baris berdasarkan `capsterId` +
+label periode (`periodeStart s/d periodeEnd`) — generate ulang periode
+yang sama (mis. setelah koreksi bonus/potongan) memperbarui baris yang
+sudah ada, bukan menambah duplikat. Formula:
+```
+BagiHasilAmount = TotalPendapatan * PersentaseBagiHasil / 100
+TotalGaji       = BagiHasilAmount + Bonus - Potongan - Keterlambatan
+```
+`TotalPendapatan`/`TotalKepala` dihitung otomatis dari Transaksi Barber
+milik capster tsb dalam rentang periode (Kasir/Admin tidak perlu input
+manual) — `Bonus`/`Potongan`/`Keterlambatan` adalah satu-satunya input
+manual, diisi Owner/Admin saat generate. `computeGajiTotal_` murni dan
+diuji lewat Node (`tests/backend/payroll.test.js`).
+
+### RBAC tampilan: Capster read-only, hanya slip miliknya
+`PAYROLL_VIEW_ALL` (Owner/Admin, lihat semua slip + form generate) dan
+`PAYROLL_VIEW_SELF` (Capster, hanya slip miliknya, tanpa form) adalah dua
+action terpisah yang keduanya di-route ke `listGajiCapster` — pembeda ada
+di `dispatchAction_` (`Code.js`) yang otomatis memfilter `capsterId`
+berdasarkan `Username` aktor saat rolenya Capster. Frontend
+(`modules/payroll/index.js`) memilih action mana yang dipanggil
+berdasarkan role via `hasRole`, dan menyembunyikan form generate
+sepenuhnya untuk Capster.
+
+### Testing Fase 7
+Unit test murni: `computeShiftReconciliation_` (5 test — pas/lebih/
+kurang/saldo awal nol/pengeluaran melebihi kas masuk) dan
+`computeGajiTotal_` (5 test — bagi hasil dasar, bonus, potongan,
+keterlambatan, kombinasi negatif). Simulasi backend end-to-end (skenario
+tambahan di harness Fase 1-6): buka shift → transaksi & pengeluaran
+otomatis ter-tag ShiftID → tutup kas dgn selisih tepat ke rupiah → tutup
+ganda ditolak → Kasir dilarang reopen, Owner boleh → payroll generate
+dgn matematika benar → generate ulang periode sama meng-upsert (bukan
+duplikat) → Kasir/Capster dilarang generate payroll → Capster hanya
+lihat slip miliknya. Verifikasi browser Playwright penuh: alur buka
+shift → lihat estimasi kas real-time → tutup kas dgn dialog konfirmasi →
+badge "Pas" tampil → riwayat shift → Owner reopen → generate & regenerate
+payroll (upsert terverifikasi lewat jumlah baris tabel tetap 1) → Kasir
+melihat menu Closing Shift tapi tidak Gaji Capster (dan sebaliknya untuk
+Capster) — nol error console.

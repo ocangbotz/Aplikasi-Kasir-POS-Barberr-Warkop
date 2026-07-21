@@ -94,7 +94,7 @@ function createTransaksiWarkop(payload, actor) {
     Status: 'Selesai',
     KasirID: actor.uid,
     NamaKasir: actor.name,
-    ShiftID: '',
+    ShiftID: activeShiftId_(actor),
     CreatedAt: nowIso,
     UpdatedAt: nowIso,
     Deleted: false,

@@ -31,6 +31,8 @@ import { renderInventory } from './modules/inventory/index.js';
 import { renderDashboardGabungan } from './modules/dashboard/gabungan.js';
 import { renderDashboardBarber } from './modules/dashboard/barber.js';
 import { renderDashboardWarkop } from './modules/dashboard/warkop.js';
+import { renderClosingShift } from './modules/closing-shift/index.js';
+import { renderPayroll } from './modules/payroll/index.js';
 
 const ALL_ROLES = ['Owner', 'Admin', 'Kasir', 'Capster'];
 
@@ -72,6 +74,9 @@ function registerRoutes() {
   registerRoute('/warkop/menu', { render: withShell(renderMenuWarkop), roles: WARKOP_ROLES, title: 'Menu Warkop' });
   registerRoute('/warkop/inventory', { render: withShell((el) => renderInventory(el, 'Warkop')), roles: WARKOP_ROLES, title: 'Inventory Warkop' });
   registerRoute('/warkop/pengeluaran', { render: withShell((el) => renderPengeluaran(el, 'Warkop')), roles: WARKOP_ROLES, title: 'Pengeluaran Warkop' });
+
+  registerRoute('/closing-shift', { render: withShell(renderClosingShift), roles: ['Owner', 'Admin', 'Kasir'], title: 'Closing Shift' });
+  registerRoute('/payroll', { render: withShell(renderPayroll), roles: ['Owner', 'Admin', 'Capster'], title: 'Gaji Capster' });
 }
 
 function renderNotFound(container) {

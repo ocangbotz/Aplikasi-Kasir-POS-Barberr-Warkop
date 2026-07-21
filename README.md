@@ -47,7 +47,15 @@ commit di tiap fase, lihat `docs/ARCHITECTURE.md` untuk detail):
       Capster/Layanan Terlaris & Menu/Kategori Terlaris. 83 unit test
       lulus + simulasi backend end-to-end + verifikasi browser Playwright
       penuh (termasuk Chart.js ter-lazy-load & ter-render).
-- [ ] Fase 7 — Closing Shift + Gaji Capster
+- [x] **Fase 7 — Closing Shift + Gaji Capster**: buka/tutup kas per kasir
+      (transaksi & pengeluaran otomatis ter-tag ke shift aktif), preview
+      estimasi kas real-time sebelum tutup, rekonsiliasi kas fisik vs
+      sistem (Selisih Pas/Lebih/Kurang), kunci shift setelah ditutup +
+      buka-kembali khusus Owner/Admin (tercatat di Audit Log), gaji
+      capster otomatis (bagi hasil % + bonus - potongan - keterlambatan)
+      dgn upsert per periode (generate ulang tidak duplikat), Capster
+      hanya melihat slip miliknya sendiri (read-only). 93 unit test lulus
+      + simulasi backend end-to-end + verifikasi browser Playwright penuh.
 - [ ] Fase 8 — Laporan + Owner Panel
 - [ ] Fase 9 — PWA lanjutan + fitur bonus premium
 - [ ] Fase 10 — Optimasi & Testing menyeluruh
