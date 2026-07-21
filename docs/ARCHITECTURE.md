@@ -384,3 +384,40 @@ Playwright penuh: buat menu, pesanan dgn QRIS pas, stok berkurang di
 tabel Menu, split bill 2 pembayar pakai tombol "Bagi Rata", struk
 menampilkan rincian tiap pembayar, riwayat menampilkan badge "Split Bill
 (2 org)", pengeluaran Warkop — semua lulus, nol error console.
+
+## 11. Inventory Barber & Warkop (Fase 5)
+
+### Cakupan & batas dengan Produk Warkop
+`Inventory.js` mengelola **bahan baku/consumable** (Nama, Kategori, Stok,
+Satuan, Stok Minimum, Harga Beli Terakhir, Supplier) di 2 sheet terpisah
+(`Inventory Barber`/`Inventory Warkop`), dikelola **manual** (restock via
+`delta` positif, pemakaian via `delta` negatif) — BUKAN dipotong otomatis
+oleh transaksi, karena tidak ada resep/BOM yang menghubungkan 1 transaksi
+ke pemakaian bahan baku spesifik (lihat asumsi desain §5). Ini berbeda
+dari stok **Produk Warkop** (menu jadi) yang memang otomatis berkurang
+1:1 saat laku terjual — itu sudah dibangun di `Produk.js`/`Warkop.js`
+(Fase 4). `adjustInventoryStok` menolak penyesuaian yang membuat stok
+akhir negatif, dan bisa sekaligus mencatat `HargaBeliTerakhir` saat
+restock (untuk referensi harga beli terbaru).
+
+### Notifikasi stok hampir habis
+`getLowStockSummary()` menggabungkan item dengan `Stok <= StokMinimum`
+dari **3 sumber sekaligus**: Inventory Barber, Inventory Warkop, dan
+Produk Warkop (supaya Owner/Admin/Kasir dapat satu titik notifikasi utuh,
+bukan harus mengecek 3 halaman terpisah). Frontend menampilkannya sebagai
+lonceng 🔔 di topbar (`shell/layout.js`) dengan badge angka & dropdown
+detail per item (nama, jenis usaha, sisa stok) yang link langsung ke
+halaman inventory terkait — dipanggil setiap render shell (tiap navigasi
+antar halaman), bukan di-cache, supaya datanya selalu segar.
+
+### Testing Fase 5
+Unit test murni: `isLowStock_` (`tests/backend/inventory.test.js`).
+Simulasi backend end-to-end: buat item per jenis usaha (terbukti
+terpisah), RBAC (Kasir hanya `inventory.view`, tidak `inventory.manage`),
+restock + catat harga beli, pemakaian yang bikin stok negatif ditolak,
+ringkasan stok rendah gabungan 3-sumber teruji akurat (item yang stoknya
+cukup TIDAK ikut muncul). Verifikasi browser Playwright penuh: tambah item
+stok rendah → badge notifikasi muncul dgn angka benar → dropdown
+menampilkan detail yang benar → restock via UI mengembalikan stok ke
+aman → Kasir terbukti hanya bisa lihat (tombol kelola tersembunyi) — nol
+error console.

@@ -35,7 +35,11 @@ commit di tiap fase, lihat `docs/ARCHITECTURE.md` untuk detail):
       tagihan ke beberapa pembayar dgn tombol "Bagi Rata"), pengeluaran
       Warkop, struk (termasuk rincian split bill). 68 unit test lulus +
       simulasi backend end-to-end + verifikasi browser Playwright penuh.
-- [ ] Fase 5 — Inventory Barber & Warkop
+- [x] **Fase 5 — Inventory Barber & Warkop**: stok bahan baku/consumable
+      terpisah per usaha (restock/pemakaian manual, tidak bisa negatif),
+      notifikasi stok hampir habis (lonceng + badge di topbar, gabungan
+      Inventory Barber+Warkop+Menu Warkop). 70 unit test lulus + simulasi
+      backend end-to-end + verifikasi browser Playwright penuh.
 - [ ] Fase 6 — Dashboard (Gabungan/Barber/Warkop) + filter + Chart.js
 - [ ] Fase 7 — Closing Shift + Gaji Capster
 - [ ] Fase 8 — Laporan + Owner Panel

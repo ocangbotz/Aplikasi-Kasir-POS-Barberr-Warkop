@@ -9,6 +9,7 @@ import { getCurrentUser, logout, hasRole } from '../../core/auth.js';
 import { navigate } from '../../core/router.js';
 import { toggleTheme, escapeHtml } from '../../core/ui.js';
 import { APP_META } from '../../core/config.js';
+import { apiCall } from '../../core/api.js';
 
 // Struktur nav: item lepas (tanpa group) tampil langsung; item dgn `group`
 // dikelompokkan di bawah judul berwarna (biru=Barber, oranye=Warkop,
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
       { path: '/barber/pelanggan', label: 'Data Pelanggan', icon: '🙍', roles: ['Owner', 'Admin', 'Kasir'] },
       { path: '/barber/layanan', label: 'Layanan', icon: '💈', roles: ['Owner', 'Admin', 'Kasir'] },
       { path: '/barber/capster', label: 'Capster', icon: '✂️', roles: ['Owner', 'Admin'] },
+      { path: '/barber/inventory', label: 'Inventory Barber', icon: '📦', roles: ['Owner', 'Admin', 'Kasir'] },
       { path: '/barber/pengeluaran', label: 'Pengeluaran Barber', icon: '💸', roles: ['Owner', 'Admin', 'Kasir'] }
     ]
   },
@@ -33,6 +35,7 @@ const NAV_ITEMS = [
       { path: '/warkop/transaksi', label: 'Pesanan Baru', icon: '🧾', roles: ['Owner', 'Admin', 'Kasir'] },
       { path: '/warkop/riwayat', label: 'Riwayat Transaksi', icon: '📋', roles: ['Owner', 'Admin', 'Kasir'] },
       { path: '/warkop/menu', label: 'Menu', icon: '☕', roles: ['Owner', 'Admin', 'Kasir'] },
+      { path: '/warkop/inventory', label: 'Inventory Warkop', icon: '📦', roles: ['Owner', 'Admin', 'Kasir'] },
       { path: '/warkop/pengeluaran', label: 'Pengeluaran Warkop', icon: '💸', roles: ['Owner', 'Admin', 'Kasir'] }
     ]
   },
@@ -103,6 +106,13 @@ export function renderShellInto(rootEl) {
           <button id="btn-open-sidebar" type="button" class="btn-outline !px-2.5 !py-2 lg:hidden" aria-label="Buka menu">☰</button>
           <div class="hidden text-sm text-slate-500 dark:text-slate-400 sm:block">${APP_META.name}</div>
           <div class="flex items-center gap-2">
+            ${hasRole(user, ['Owner', 'Admin', 'Kasir']) ? `
+            <div class="relative">
+              <button id="btn-low-stock" type="button" class="btn-outline relative !px-2.5 !py-2" aria-label="Notifikasi stok rendah">
+                🔔<span id="low-stock-badge" class="absolute -right-1 -top-1 hidden min-w-[1.1rem] rounded-full bg-red-600 px-1 text-center text-[10px] leading-4 text-white"></span>
+              </button>
+              <div id="low-stock-dropdown" class="absolute right-0 z-30 mt-2 hidden w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900"></div>
+            </div>` : ''}
             <button id="btn-toggle-theme" type="button" class="btn-outline !px-2.5 !py-2" aria-label="Ganti tema">🌓</button>
             <div class="hidden text-right text-sm sm:block">
               <div class="font-medium">${user ? escapeHtml(user.name) : ''}</div>
@@ -140,7 +150,46 @@ export function renderShellInto(rootEl) {
     navigate('/login');
   });
 
+  initLowStockBell(rootEl);
+
   return rootEl.querySelector('#page-content');
+}
+
+async function initLowStockBell(rootEl) {
+  const btn = rootEl.querySelector('#btn-low-stock');
+  if (!btn) return;
+  const badge = rootEl.querySelector('#low-stock-badge');
+  const dropdown = rootEl.querySelector('#low-stock-dropdown');
+
+  let items = [];
+  try {
+    items = await apiCall('inventory.view', { summary: true });
+  } catch (err) {
+    return; // notifikasi bersifat non-kritis, diamkan kalau gagal
+  }
+
+  if (items.length > 0) {
+    badge.textContent = String(items.length);
+    badge.classList.remove('hidden');
+  }
+
+  dropdown.innerHTML = items.length
+    ? items
+        .map(
+          (i) => `
+      <a href="#/${i.jenisUsaha.toLowerCase()}/inventory" class="block border-b border-slate-100 px-3 py-2 text-sm last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800" data-nav-link>
+        <div class="font-medium">${escapeHtml(i.nama)} <span class="badge-neutral">${escapeHtml(i.jenisUsaha)}</span></div>
+        <div class="text-xs text-red-600 dark:text-red-400">Sisa ${escapeHtml(i.stok)} ${escapeHtml(i.satuan)} (min. ${escapeHtml(i.stokMinimum)})</div>
+      </a>`
+        )
+        .join('')
+    : '<p class="p-3 text-center text-sm text-slate-400">Semua stok aman.</p>';
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle('hidden');
+  });
+  document.addEventListener('click', () => dropdown.classList.add('hidden'));
 }
 
 /** Bungkus render function halaman supaya otomatis dipasangi shell. */

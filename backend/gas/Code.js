@@ -204,6 +204,24 @@ function dispatchAction_(action, token, payload) {
       return listPengeluaran(payload.jenisUsaha, payload);
     }
 
+    case ACTIONS.INVENTORY_VIEW: {
+      requirePermission(token, action);
+      if (payload.summary) return getLowStockSummary();
+      assertRequiredFields(payload, ['jenisUsaha']);
+      return listInventory(payload.jenisUsaha);
+    }
+
+    case ACTIONS.INVENTORY_MANAGE: {
+      var inventoryActor = requirePermission(token, action);
+      assertRequiredFields(payload, ['jenisUsaha']);
+      if (payload.adjust) {
+        assertRequiredFields(payload, ['itemId']);
+        return adjustInventoryStok(payload.jenisUsaha, payload.itemId, payload.delta, payload.keterangan, payload.hargaBeliTerakhir, inventoryActor);
+      }
+      if (payload.itemId) return updateInventoryItem(payload.jenisUsaha, payload.itemId, payload, inventoryActor);
+      return createInventoryItem(payload.jenisUsaha, payload, inventoryActor);
+    }
+
     default:
       throw createAppError('UNKNOWN_ACTION', 'Aksi tidak dikenal: ' + action);
   }
