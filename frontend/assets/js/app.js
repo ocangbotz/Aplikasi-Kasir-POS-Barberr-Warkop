@@ -6,6 +6,7 @@
  * masing-masing modul.
  */
 import { initTheme } from './core/theme.js';
+import { initPWA } from './core/pwa.js';
 import { authStore, isAuthenticated, verifySession } from './core/auth.js';
 import { initRouter, registerRoute } from './core/router.js';
 import { registerNavItem } from './core/nav.js';
@@ -134,6 +135,7 @@ function mountShell() {
 
 async function bootstrap() {
   initTheme();
+  initPWA();
   document.getElementById('splash')?.remove();
   await verifySession();
   mountShell();

@@ -10,6 +10,7 @@ import { currentPath, navigate } from '../core/router.js';
 import { themeStore, toggleTheme } from '../core/theme.js';
 import { APP_CONFIG } from '../core/config.js';
 import { apiCall } from '../core/api.js';
+import { onInstallAvailabilityChange, promptInstall, isRunningStandalone } from '../core/pwa.js';
 
 const NOTIF_REFRESH_MS = 60000;
 
@@ -68,6 +69,10 @@ export function renderLayout(root) {
           </button>
 
           <div class="flex-1"></div>
+
+          <button id="install-app-btn" type="button" class="btn-ghost hidden items-center gap-1.5 border border-slate-200 !py-1.5 text-xs dark:border-white/10" title="Install aplikasi ke perangkat">
+            <span>📲</span><span class="hidden md:inline">Install App</span>
+          </button>
 
           <button id="theme-toggle" type="button" class="btn-ghost !px-2.5" title="Ganti tema">
             <span id="theme-icon" class="text-base">${themeIcon(themeStore.get())}</span>
@@ -166,7 +171,23 @@ function wireInteractions(root) {
   window.addEventListener('hashchange', updateActiveLink);
 
   const notifTimer = wireNotificationBell(root);
-  return () => { if (notifTimer) clearInterval(notifTimer); };
+  const unsubscribeInstall = wireInstallButton(root);
+  return () => {
+    if (notifTimer) clearInterval(notifTimer);
+    unsubscribeInstall();
+  };
+}
+
+/** Tombol "Install App" hanya tampil saat browser menawarkan prompt install (beforeinstallprompt) dan belum berjalan sebagai app terinstall. */
+function wireInstallButton(root) {
+  const btn = root.querySelector('#install-app-btn');
+  if (!btn || isRunningStandalone()) return () => {};
+
+  btn.addEventListener('click', () => promptInstall());
+  return onInstallAvailabilityChange((available) => {
+    btn.classList.toggle('hidden', !available);
+    btn.classList.toggle('flex', available);
+  });
 }
 
 function notifRowHtml(label, items) {
