@@ -135,6 +135,12 @@ async function main() {
       bad('State terpilih tombol metode pembayaran salah: cash="' + cashClass + '" qris="' + qrisClass + '"');
     }
 
+    await page.fill('#uangDiterima', '50000');
+    await page.waitForTimeout(100);
+    const kembalianText = await page.locator('#kembalian-text').innerText();
+    if (kembalianText === 'Rp10.000') ok('Kembalian dihitung otomatis: ' + kembalianText);
+    else bad('Kembalian salah: ' + kembalianText);
+
     await page.click('#submit-btn');
     await page.waitForSelector('#struk-print-area', { timeout: 5000 });
     const strukText = await page.locator('#struk-print-area').innerText();
@@ -142,6 +148,11 @@ async function main() {
       ok('Struk tampil dengan data transaksi yang benar (pelanggan, capster, total)');
     } else {
       bad('Isi struk tidak sesuai: ' + strukText);
+    }
+    if (strukText.includes('Uang Diterima') && strukText.includes('Rp50.000') && strukText.includes('Kembalian') && strukText.includes('Rp10.000')) {
+      ok('Struk menampilkan Uang Diterima & Kembalian dengan benar');
+    } else {
+      bad('Uang Diterima/Kembalian tidak tampil benar di struk: ' + strukText);
     }
     if (/BRB-\d{8}-0001/.test(strukText)) ok('Nomor transaksi mengikuti format BRB-YYYYMMDD-0001');
     else bad('Format nomor transaksi tidak sesuai: ' + strukText);

@@ -121,17 +121,31 @@ function barberCreateTransaksi_(payload) {
 
   var layananItems = payload.layanan.map(function (item) {
     var harga = Number(item.harga);
+    var qty = Math.floor(Number(item.qty)) || 1;
     if (!item.nama || !(harga > 0)) throw new AppError_('VALIDATION_ERROR', 'Data layanan tidak valid.');
-    return { layananId: item.layananId || '', nama: sanitizeString_(item.nama), harga: harga };
+    if (qty < 1) throw new AppError_('VALIDATION_ERROR', 'Kuantitas layanan minimal 1.');
+    return { layananId: item.layananId || '', nama: sanitizeString_(item.nama), harga: harga, qty: qty };
   });
 
-  var subtotal = round2_(layananItems.reduce(function (sum, it) { return sum + it.harga; }, 0));
+  var subtotal = round2_(layananItems.reduce(function (sum, it) { return sum + it.harga * it.qty; }, 0));
   var diskon = Math.min(Math.max(Number(payload.diskon) || 0, 0), subtotal);
   var grandTotal = round2_(subtotal - diskon);
 
   var tanggal = payload.tanggal || todayDateString_();
   var jam = payload.jam || nowTimeString_();
   var status = payload.status === STATUS_TRANSAKSI.DIBATALKAN ? STATUS_TRANSAKSI.DIBATALKAN : STATUS_TRANSAKSI.SELESAI;
+
+  // Uang diterima & kembalian hanya berlaku untuk pembayaran Cash yang selesai --
+  // membantu kasir menghitung kembalian yang harus diberikan ke pelanggan.
+  var uangDiterima = 0;
+  var kembalian = 0;
+  if (payload.metodePembayaran === METODE_BAYAR.CASH && status === STATUS_TRANSAKSI.SELESAI) {
+    uangDiterima = Number(payload.uangDiterima);
+    if (!(uangDiterima >= grandTotal)) {
+      throw new AppError_('VALIDATION_ERROR', 'Uang diterima harus lebih besar atau sama dengan total belanja.');
+    }
+    kembalian = round2_(uangDiterima - grandTotal);
+  }
 
   var pelanggan = findOrCreatePelanggan_(payload.namaPelanggan, payload.noHp);
 
@@ -153,6 +167,8 @@ function barberCreateTransaksi_(payload) {
     Diskon: diskon,
     GrandTotal: grandTotal,
     MetodePembayaran: payload.metodePembayaran,
+    UangDiterima: uangDiterima,
+    Kembalian: kembalian,
     Status: status,
     Catatan: sanitizeString_(payload.catatan),
     KasirID: session.userId,

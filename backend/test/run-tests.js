@@ -77,6 +77,24 @@ test('Semua 16 sheet memiliki header sesuai skema', () => {
   });
 });
 
+test('ensureSheetWithHeaders_ menambah kolom baru (mis. UangDiterima/Kembalian) ke sheet lama tanpa mengubah data yang sudah ada', () => {
+  const ss = ctx.getDatabase_();
+  const oldHeaders = ['ID', 'Nama', 'GrandTotal'];
+  ss.insertSheet('__MigrasiTest');
+  const sheet = ss.getSheetByName('__MigrasiTest');
+  sheet.getRange(1, 1, 1, oldHeaders.length).setValues([oldHeaders]);
+  sheet.appendRow(['TRX1', 'Andi', 20000]);
+
+  ctx.ensureSheetWithHeaders_(ss, '__MigrasiTest', ['ID', 'Nama', 'GrandTotal', 'UangDiterima', 'Kembalian']);
+
+  const data = ctx.getSheetData_('__MigrasiTest');
+  assertValuesEqual(data.headers, ['ID', 'Nama', 'GrandTotal', 'UangDiterima', 'Kembalian']);
+  assert.strictEqual(data.rows.length, 1, 'baris data lama tidak boleh hilang/terduplikasi');
+  assert.strictEqual(data.rows[0].ID, 'TRX1');
+  assert.strictEqual(data.rows[0].GrandTotal, 20000);
+  assert.strictEqual(data.rows[0].UangDiterima, '', 'kolom baru untuk baris lama kosong, bukan error');
+});
+
 test('Settings ter-seed dengan default values', () => {
   const data = ctx.getSheetData_(ctx.SHEETS.SETTINGS);
   assert.ok(data.rows.length >= 9);
@@ -120,13 +138,13 @@ test('Permission matrix: Owner boleh semua, Kasir dilarang menu Owner Panel tapi
   assert.strictEqual(ctx.hasPermission_('Owner', 'kelolaUser'), true);
   assert.strictEqual(ctx.hasPermission_('Kasir', 'kelolaUser'), false);
   assert.strictEqual(ctx.hasPermission_('Kasir', 'transaksiBarber'), true);
-  assert.strictEqual(ctx.hasPermission_('Kasir', 'inventory'), true, 'kewenangan Admin lama sudah melekat ke Kasir');
   assert.strictEqual(ctx.hasPermission_('Kasir', 'gajiCapster'), true, 'kewenangan Admin lama sudah melekat ke Kasir');
   // Menu "Owner Panel" (Kelola User, Kelola Transaksi, Audit Log, Backup & Restore)
-  // TETAP khusus Owner, tidak ikut digabung ke Kasir.
+  // dan Inventory TETAP khusus Owner, tidak ikut digabung ke Kasir.
   assert.strictEqual(ctx.hasPermission_('Kasir', 'editTransaksi'), false, 'Owner Panel tetap khusus Owner');
   assert.strictEqual(ctx.hasPermission_('Kasir', 'auditLog'), false, 'Owner Panel tetap khusus Owner');
   assert.strictEqual(ctx.hasPermission_('Kasir', 'backupRestore'), false, 'Owner Panel tetap khusus Owner');
+  assert.strictEqual(ctx.hasPermission_('Kasir', 'inventory'), false, 'inventory tetap khusus Owner');
   assert.strictEqual(ctx.hasPermission_('Admin', 'transaksiBarber'), false, 'role Admin sudah dihapus, tidak boleh punya akses apapun lagi');
   assert.strictEqual(ctx.hasPermission_('Capster', 'transaksiBarber'), false, 'role Capster sudah dihapus, tidak boleh punya akses apapun lagi');
 });
@@ -235,12 +253,15 @@ test('Kasir bisa membuat transaksi barber; subtotal/diskon/grand total dihitung 
       { layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }
     ],
     diskon: 5000,
+    uangDiterima: 25000,
     metodePembayaran: 'Cash'
   }).transaksi;
 
   assert.strictEqual(result.Subtotal, 25000);
   assert.strictEqual(result.Diskon, 5000);
   assert.strictEqual(result.GrandTotal, 20000);
+  assert.strictEqual(result.UangDiterima, 25000);
+  assert.strictEqual(result.Kembalian, 5000);
   assert.strictEqual(result.Status, 'Selesai');
   assert.ok(result.NomorTransaksi.startsWith('BRB-'));
   assert.ok(Array.isArray(result.Layanan) && result.Layanan.length === 1);
@@ -270,9 +291,35 @@ test('Nomor transaksi berurutan pada tanggal yang sama', () => {
   const t3 = ctx.barberCreateTransaksi_({
     token: kasirToken, namaPelanggan: 'Citra', noHp: '081200000001', capsterId: capsterBudi.ID,
     layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    uangDiterima: 99999999,
     metodePembayaran: 'Cash'
   }).transaksi;
   assert.ok(t3.NomorTransaksi.endsWith('-0003'));
+});
+
+test('Transaksi barber dengan qty > 1 per layanan menghitung subtotal = harga x qty', () => {
+  const result = ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Budi Dua Anak', noHp: '081234500002', capsterId: capsterBudi.ID,
+    layanan: [
+      { layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga, qty: 3 }
+    ],
+    uangDiterima: 99999999,
+    metodePembayaran: 'Cash'
+  }).transaksi;
+  assert.strictEqual(result.Subtotal, layananGunting.Harga * 3);
+  assert.strictEqual(result.GrandTotal, layananGunting.Harga * 3);
+  assert.strictEqual(result.Layanan[0].qty, 3);
+});
+
+test('Transaksi barber tanpa qty (data lama) dianggap qty = 1', () => {
+  const result = ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Tanpa Qty', noHp: '081234500003', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    uangDiterima: 99999999,
+    metodePembayaran: 'Cash'
+  }).transaksi;
+  assert.strictEqual(result.Layanan[0].qty, 1);
+  assert.strictEqual(result.Subtotal, layananGunting.Harga);
 });
 
 test('Transaksi tanpa layanan ditolak', () => {
@@ -288,6 +335,32 @@ test('Transaksi dengan metode pembayaran tidak valid ditolak', () => {
     layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
     metodePembayaran: 'Transfer Bank'
   }), 'VALIDATION_ERROR');
+});
+
+test('Transaksi barber Cash dengan uang diterima kurang dari total ditolak', () => {
+  assertThrowsCode(() => ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Kurang Bayar', noHp: '081200012399', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Cash', uangDiterima: 10000
+  }), 'VALIDATION_ERROR');
+});
+
+test('Transaksi barber Cash tanpa uang diterima ditolak (wajib diisi kasir)', () => {
+  assertThrowsCode(() => ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Lupa Isi', noHp: '081200012388', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Cash'
+  }), 'VALIDATION_ERROR');
+});
+
+test('Transaksi barber QRIS tidak butuh uang diterima; UangDiterima & Kembalian = 0', () => {
+  const result = ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Bayar QRIS', noHp: '081200012377', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'QRIS'
+  }).transaksi;
+  assert.strictEqual(result.UangDiterima, 0);
+  assert.strictEqual(result.Kembalian, 0);
 });
 
 test('barberListTransaksi_ memfilter berdasarkan tanggal & mendukung pagination', () => {
@@ -357,12 +430,15 @@ test('Transaksi warkop menghitung subtotal dari beberapa item dengan qty & mengu
       { produkId: indomieGoreng.ID, qty: 1 }
     ],
     diskon: 1000,
+    uangDiterima: 30000,
     metodePembayaran: 'Cash'
   }).transaksi;
 
   assert.strictEqual(result.Subtotal, 8500 * 2 + 10000);
   assert.strictEqual(result.Diskon, 1000);
   assert.strictEqual(result.GrandTotal, 8500 * 2 + 10000 - 1000);
+  assert.strictEqual(result.UangDiterima, 30000);
+  assert.strictEqual(result.Kembalian, 30000 - (8500 * 2 + 10000 - 1000));
   assert.ok(result.NomorTransaksi.startsWith('WRK-'));
   assert.strictEqual(result.Items.length, 2);
 
@@ -376,6 +452,27 @@ test('Transaksi ditolak jika stok tidak cukup', () => {
   assertThrowsCode(() => ctx.warkopCreateTransaksi_({
     token: kasirToken, items: [{ produkId: indomieGoreng.ID, qty: 999 }], metodePembayaran: 'Cash'
   }), 'VALIDATION_ERROR');
+});
+
+test('Transaksi warkop Cash dengan uang diterima kurang dari total ditolak', () => {
+  assertThrowsCode(() => ctx.warkopCreateTransaksi_({
+    token: kasirToken, items: [{ produkId: kopiHitam.ID, qty: 1 }], metodePembayaran: 'Cash', uangDiterima: 1000
+  }), 'VALIDATION_ERROR');
+});
+
+test('Transaksi warkop QRIS & Split Bill tidak butuh uang diterima; UangDiterima & Kembalian = 0', () => {
+  const qris = ctx.warkopCreateTransaksi_({
+    token: kasirToken, items: [{ produkId: kopiHitam.ID, qty: 1 }], metodePembayaran: 'QRIS'
+  }).transaksi;
+  assert.strictEqual(qris.UangDiterima, 0);
+  assert.strictEqual(qris.Kembalian, 0);
+
+  const split = ctx.warkopCreateTransaksi_({
+    token: kasirToken, items: [{ produkId: kopiHitam.ID, qty: 1 }],
+    splitBill: [{ metode: 'Cash', jumlah: 4000 }, { metode: 'QRIS', jumlah: 4500 }]
+  }).transaksi;
+  assert.strictEqual(split.UangDiterima, 0);
+  assert.strictEqual(split.Kembalian, 0);
 });
 
 test('Split bill: total harus sama persis dengan grand total', () => {
@@ -431,10 +528,9 @@ test('Inventory Barber & Warkop tersimpan di sheet terpisah', () => {
   assert.ok(!warkopItems.some((i) => i.ID === invHanduk.ID));
 });
 
-test('Kasir kini boleh mengakses inventory (kewenangan Admin lama sudah melekat ke Kasir)', () => {
-  const item = ctx.inventorySaveItem_({ token: kasirToken, usaha: 'Warkop', namaItem: 'Item oleh Kasir', satuan: 'pcs', stok: 5 }).item;
-  const warkopItems = ctx.inventoryList_({ token: kasirToken, usaha: 'Warkop' }).items;
-  assert.ok(warkopItems.some((i) => i.ID === item.ID));
+test('Kasir dilarang mengakses inventory (inventory = false); Owner boleh', () => {
+  assertThrowsCode(() => ctx.inventorySaveItem_({ token: kasirToken, usaha: 'Warkop', namaItem: 'Item oleh Kasir', satuan: 'pcs', stok: 5 }), 'FORBIDDEN');
+  assertThrowsCode(() => ctx.inventoryList_({ token: kasirToken, usaha: 'Warkop' }), 'FORBIDDEN');
 });
 
 test('Edit item inventory tidak mengubah stok (harus lewat inventoryAdjustStock_)', () => {
@@ -498,6 +594,7 @@ test('dashboardData_ Barber: hariIni & periodeMetrics (filter today) mencerminka
   const trx = ctx.barberCreateTransaksi_({
     token: kasirToken, namaPelanggan: 'Dashboard Test', noHp: '081200011122', capsterId: capsterBudi.ID,
     layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    uangDiterima: 99999999,
     metodePembayaran: 'Cash'
   }).transaksi;
   const after = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
@@ -514,6 +611,7 @@ test('rowToObject_ menormalkan kolom Tanggal yang sudah ter-konversi Google Shee
   const trx = ctx.barberCreateTransaksi_({
     token: kasirToken, namaPelanggan: 'Simulasi Sheets Auto-Convert', noHp: '081200077766', capsterId: capsterBudi.ID,
     layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    uangDiterima: 99999999,
     metodePembayaran: 'Cash'
   }).transaksi;
 
@@ -538,6 +636,7 @@ test('rowToObject_ menormalkan kolom Jam yang sudah ter-konversi Google Sheets j
   const trx = ctx.barberCreateTransaksi_({
     token: kasirToken, namaPelanggan: 'Simulasi Jam Auto-Convert', noHp: '081200077755', capsterId: capsterBudi.ID,
     layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    uangDiterima: 99999999,
     metodePembayaran: 'Cash'
   }).transaksi;
 
@@ -583,6 +682,7 @@ test('dashboardData_: transaksi kemarin muncul di filter "yesterday" tapi tidak 
   const trx = ctx.barberCreateTransaksi_({
     token: kasirToken, namaPelanggan: 'Kemarin', noHp: '081200099988', capsterId: capsterBudi.ID,
     layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    uangDiterima: 99999999,
     metodePembayaran: 'Cash', tanggal: yesterday
   }).transaksi;
 
@@ -625,6 +725,7 @@ test('Capster Terlaris & Layanan Terlaris terurut benar berdasarkan pendapatan/j
   ctx.barberCreateTransaksi_({
     token: kasirToken, namaPelanggan: 'Untuk Dedi', noHp: '081200055566', capsterId: capsterKedua.ID,
     layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    uangDiterima: 99999999,
     metodePembayaran: 'Cash'
   });
   const data = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
@@ -672,6 +773,7 @@ test('Transaksi yang dibuat selagi shift terbuka otomatis ter-tag ShiftID', () =
   const trx = ctx.barberCreateTransaksi_({
     token: kasirToken, namaPelanggan: 'Shift Test', noHp: '081277788899', capsterId: capsterBudi.ID,
     layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    uangDiterima: 99999999,
     metodePembayaran: 'Cash'
   }).transaksi;
   assert.strictEqual(trx.ShiftID, currentShiftId);
@@ -931,7 +1033,7 @@ test('laporanTransaksi_ memaginasi tabel tapi ringkasan tetap dihitung dari SELU
     ctx.barberCreateTransaksi_({
       token: ownerToken, namaPelanggan: 'Pelanggan Paginasi ' + i, capsterId: capster.ID,
       layanan: [{ layananId: layanan.ID, nama: layanan.Nama, harga: layanan.Harga }],
-      diskon: 0, metodePembayaran: 'Cash'
+      diskon: 0, metodePembayaran: 'Cash', uangDiterima: 99999999
     });
   }
 

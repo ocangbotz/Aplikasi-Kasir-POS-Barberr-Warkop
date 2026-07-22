@@ -13,12 +13,12 @@ SHEET_SCHEMAS_[SHEETS.DASHBOARD] = [
 SHEET_SCHEMAS_[SHEETS.TRANSAKSI_BARBER] = [
   'ID', 'NomorTransaksi', 'Tanggal', 'Jam', 'NamaPelanggan', 'NoHP', 'PelangganID',
   'CapsterID', 'NamaCapster', 'Layanan', 'Subtotal', 'Diskon', 'GrandTotal',
-  'MetodePembayaran', 'Status', 'Catatan', 'KasirID', 'NamaKasir', 'ShiftID',
+  'MetodePembayaran', 'UangDiterima', 'Kembalian', 'Status', 'Catatan', 'KasirID', 'NamaKasir', 'ShiftID',
   'CreatedAt', 'UpdatedAt', 'IsDeleted'
 ];
 SHEET_SCHEMAS_[SHEETS.TRANSAKSI_WARKOP] = [
   'ID', 'NomorTransaksi', 'Tanggal', 'Jam', 'Items', 'Subtotal', 'Diskon', 'GrandTotal',
-  'MetodePembayaran', 'SplitBill', 'Status', 'Catatan', 'KasirID', 'NamaKasir',
+  'MetodePembayaran', 'UangDiterima', 'Kembalian', 'SplitBill', 'Status', 'Catatan', 'KasirID', 'NamaKasir',
   'PelangganID', 'ShiftID', 'CreatedAt', 'UpdatedAt', 'IsDeleted'
 ];
 SHEET_SCHEMAS_[SHEETS.PENGELUARAN_BARBER] = [
@@ -147,9 +147,32 @@ function ensureSheetWithHeaders_(ss, sheetName, headers) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
+  } else {
+    migrateMissingColumns_(sheet, headers);
   }
   applyTextFormatColumns_(sheet, sheetName, headers);
   return sheet;
+}
+
+/**
+ * Tambahkan kolom baru (dari update fitur) ke sheet PRODUKSI yang sudah ada
+ * datanya, tanpa mengubah/menghapus/menggeser kolom yang sudah ada -- supaya
+ * setupDatabase() aman dijalankan ulang setelah rilis fitur baru (mis.
+ * UangDiterima/Kembalian) tanpa merusak data lama. Kolom baru ditambahkan di
+ * ujung kanan; getSheetData_/objectToRow_ memetakan berdasarkan nama header,
+ * jadi urutan kolom tidak masalah.
+ */
+function migrateMissingColumns_(sheet, headers) {
+  var lastCol = sheet.getLastColumn();
+  var existing = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  headers.forEach(function (h) {
+    if (existing.indexOf(h) === -1) {
+      var nextCol = sheet.getLastColumn() + 1;
+      sheet.getRange(1, nextCol, 1, 1).setValues([[h]])
+        .setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
+      existing.push(h);
+    }
+  });
 }
 
 /** Konversi indeks kolom (1-based) ke huruf kolom A1 (1->A, 27->AA, dst). */

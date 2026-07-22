@@ -118,6 +118,18 @@ function warkopCreateTransaksi_(payload) {
     metodePembayaran = payload.metodePembayaran;
   }
 
+  // Uang diterima & kembalian hanya berlaku untuk pembayaran Cash tunggal
+  // (bukan QRIS atau Split Bill) -- membantu kasir menghitung kembalian.
+  var uangDiterima = 0;
+  var kembalian = 0;
+  if (metodePembayaran === METODE_BAYAR.CASH) {
+    uangDiterima = Number(payload.uangDiterima);
+    if (!(uangDiterima >= grandTotal)) {
+      throw new AppError_('VALIDATION_ERROR', 'Uang diterima harus lebih besar atau sama dengan total belanja.');
+    }
+    kembalian = round2_(uangDiterima - grandTotal);
+  }
+
   var tanggal = payload.tanggal || todayDateString_();
   var jam = payload.jam || nowTimeString_();
   var pelanggan = payload.noHp ? findOrCreatePelanggan_(payload.namaPelanggan || 'Pelanggan', payload.noHp) : null;
@@ -139,6 +151,8 @@ function warkopCreateTransaksi_(payload) {
     Diskon: diskon,
     GrandTotal: grandTotal,
     MetodePembayaran: metodePembayaran,
+    UangDiterima: uangDiterima,
+    Kembalian: kembalian,
     SplitBill: splitBill ? JSON.stringify(splitBill) : '',
     Status: STATUS_TRANSAKSI.SELESAI,
     Catatan: sanitizeString_(payload.catatan),
