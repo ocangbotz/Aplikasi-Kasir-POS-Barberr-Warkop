@@ -116,11 +116,14 @@ test('requireAuth_ menerima token valid & menolak token acak', () => {
   assertThrowsCode(() => ctx.requireAuth_('token-acak-tidak-valid'), 'AUTH_REQUIRED');
 });
 
-test('Permission matrix: Owner boleh semua, Kasir dilarang kelolaUser', () => {
+test('Permission matrix: Owner boleh semua, Kasir dilarang kelolaUser tapi boleh hal-hal yang dulu milik Admin', () => {
   assert.strictEqual(ctx.hasPermission_('Owner', 'kelolaUser'), true);
   assert.strictEqual(ctx.hasPermission_('Kasir', 'kelolaUser'), false);
   assert.strictEqual(ctx.hasPermission_('Kasir', 'transaksiBarber'), true);
-  assert.strictEqual(ctx.hasPermission_('Capster', 'transaksiWarkop'), false);
+  assert.strictEqual(ctx.hasPermission_('Kasir', 'inventory'), true, 'kewenangan Admin lama sudah melekat ke Kasir');
+  assert.strictEqual(ctx.hasPermission_('Kasir', 'gajiCapster'), true, 'kewenangan Admin lama sudah melekat ke Kasir');
+  assert.strictEqual(ctx.hasPermission_('Admin', 'transaksiBarber'), false, 'role Admin sudah dihapus, tidak boleh punya akses apapun lagi');
+  assert.strictEqual(ctx.hasPermission_('Capster', 'transaksiBarber'), false, 'role Capster sudah dihapus, tidak boleh punya akses apapun lagi');
 });
 
 test('requirePermission_ melempar FORBIDDEN untuk role tanpa akses', () => {
@@ -197,7 +200,7 @@ test('Persentase bagi hasil capster di luar 0-100 ditolak', () => {
   assertThrowsCode(() => ctx.barberSaveCapster_({ token: ownerToken, nama: 'X', persentaseBagiHasil: 150 }), 'VALIDATION_ERROR');
 });
 
-// Buat akun Kasir untuk menguji permission (Kasir dilarang kelolaLayananProduk/kelolaCapster).
+// Buat akun Kasir untuk menguji permission.
 let kasirToken;
 test('Setup akun Kasir untuk uji permission', () => {
   const salt = ctx.generateSalt_();
@@ -210,9 +213,11 @@ test('Setup akun Kasir untuk uji permission', () => {
   assert.ok(kasirToken);
 });
 
-test('Kasir dilarang membuat/mengubah layanan & capster', () => {
-  assertThrowsCode(() => ctx.barberSaveLayanan_({ token: kasirToken, nama: 'X', harga: 1000 }), 'FORBIDDEN');
-  assertThrowsCode(() => ctx.barberSaveCapster_({ token: kasirToken, nama: 'X', persentaseBagiHasil: 10 }), 'FORBIDDEN');
+test('Kasir kini boleh membuat/mengubah layanan & capster (kewenangan Admin lama sudah melekat ke Kasir)', () => {
+  const layanan = ctx.barberSaveLayanan_({ token: kasirToken, nama: 'Layanan oleh Kasir', harga: 15000 }).layanan;
+  assert.strictEqual(layanan.Nama, 'Layanan oleh Kasir');
+  const capster = ctx.barberSaveCapster_({ token: kasirToken, nama: 'Capster oleh Kasir', persentaseBagiHasil: 30 }).capster;
+  assert.strictEqual(capster.Nama, 'Capster oleh Kasir');
 });
 
 test('Kasir bisa membuat transaksi barber; subtotal/diskon/grand total dihitung benar', () => {
@@ -334,8 +339,9 @@ test('Edit menu tanpa field stok tidak menimpa stok yang ada (mencegah reset sto
   kopiHitam = updated;
 });
 
-test('Kasir dilarang membuat/mengubah menu', () => {
-  assertThrowsCode(() => ctx.warkopSaveProduk_({ token: kasirToken, nama: 'X', kategori: 'X', hargaJual: 1000 }), 'FORBIDDEN');
+test('Kasir kini boleh membuat/mengubah menu (kewenangan Admin lama sudah melekat ke Kasir)', () => {
+  const produk = ctx.warkopSaveProduk_({ token: kasirToken, nama: 'Menu oleh Kasir', kategori: 'Minuman', modal: 2000, hargaJual: 5000, stok: 10 }).produk;
+  assert.strictEqual(produk.Nama, 'Menu oleh Kasir');
 });
 
 test('Transaksi warkop menghitung subtotal dari beberapa item dengan qty & mengurangi stok', () => {
@@ -420,9 +426,10 @@ test('Inventory Barber & Warkop tersimpan di sheet terpisah', () => {
   assert.ok(!warkopItems.some((i) => i.ID === invHanduk.ID));
 });
 
-test('Kasir dilarang mengakses inventory', () => {
-  assertThrowsCode(() => ctx.inventoryList_({ token: kasirToken, usaha: 'Warkop' }), 'FORBIDDEN');
-  assertThrowsCode(() => ctx.inventorySaveItem_({ token: kasirToken, usaha: 'Warkop', namaItem: 'X', satuan: 'pcs' }), 'FORBIDDEN');
+test('Kasir kini boleh mengakses inventory (kewenangan Admin lama sudah melekat ke Kasir)', () => {
+  const item = ctx.inventorySaveItem_({ token: kasirToken, usaha: 'Warkop', namaItem: 'Item oleh Kasir', satuan: 'pcs', stok: 5 }).item;
+  const warkopItems = ctx.inventoryList_({ token: kasirToken, usaha: 'Warkop' }).items;
+  assert.ok(warkopItems.some((i) => i.ID === item.ID));
 });
 
 test('Edit item inventory tidak mengubah stok (harus lewat inventoryAdjustStock_)', () => {
@@ -465,17 +472,6 @@ test('Kasir bisa mencatat pengeluaran Barber & Warkop dengan kategori valid', ()
 test('Pengeluaran dengan nominal <= 0 atau kategori tidak dikenal ditolak', () => {
   assertThrowsCode(() => ctx.pengeluaranCreate_({ token: kasirToken, usaha: 'Barber', nominal: 0, kategori: 'Operasional', tanggal: ctx.todayDateString_() }), 'VALIDATION_ERROR');
   assertThrowsCode(() => ctx.pengeluaranCreate_({ token: kasirToken, usaha: 'Barber', nominal: 1000, kategori: 'Kategori Ngasal', tanggal: ctx.todayDateString_() }), 'VALIDATION_ERROR');
-});
-
-test('Capster dilarang mencatat pengeluaran (permission pengeluaran = false)', () => {
-  const salt = ctx.generateSalt_();
-  ctx.appendRowObject_(ctx.SHEETS.KASIR, {
-    ID: ctx.generateId_('USR'), Nama: 'Rizky Capster', Username: 'rizky', Role: 'Capster',
-    PasswordHash: ctx.hashPassword_('capster123', salt), PasswordSalt: salt,
-    CapsterID: '', Status: 'Aktif', CreatedAt: new Date(), UpdatedAt: new Date()
-  });
-  const capsterToken = ctx.authLogin_({ username: 'rizky', password: 'capster123' }).token;
-  assertThrowsCode(() => ctx.pengeluaranCreate_({ token: capsterToken, usaha: 'Barber', nominal: 1000, kategori: 'Operasional', tanggal: ctx.todayDateString_() }), 'FORBIDDEN');
 });
 
 test('Upload foto nota (base64) menghasilkan URL, tersimpan di FotoNotaURL', () => {
@@ -707,6 +703,7 @@ test('Shift yang sudah ditutup tidak bisa ditutup lagi (tidak ada shift terbuka)
 test('Kasir dilarang membuka kembali shift (reopenShift = false); Owner boleh', () => {
   const lastShift = ctx.shiftList_({ token: ownerToken, pageSize: 1 }).shift[0];
   assertThrowsCode(() => ctx.shiftReopen_({ token: kasirToken, id: lastShift.ID }), 'FORBIDDEN');
+
   const reopened = ctx.shiftReopen_({ token: ownerToken, id: lastShift.ID }).shift;
   assert.strictEqual(reopened.Status, 'Terbuka');
   assert.strictEqual(reopened.ReopenedBy, 'Owner');
@@ -737,8 +734,9 @@ test('gajiCapsterSave_ menghitung Total Gaji = BagiHasil + Bonus - Potongan - Ke
   assert.strictEqual(allForPeriode.length, 1, 'harus tetap 1 baris per capster per periode');
 });
 
-test('Kasir dilarang mengakses modul Gaji Capster', () => {
-  assertThrowsCode(() => ctx.gajiCapsterPreview_({ token: kasirToken, capsterId: capsterBudi.ID, periode: '2026-01' }), 'FORBIDDEN');
+test('Kasir kini boleh mengakses modul Gaji Capster (kewenangan Admin lama sudah melekat ke Kasir)', () => {
+  const preview = ctx.gajiCapsterPreview_({ token: kasirToken, capsterId: capsterBudi.ID, periode: ctx.todayDateString_().slice(0, 7) });
+  assert.ok(preview.persentaseBagiHasil >= 0);
 });
 
 // --- Modul Pelanggan (list/detail/member) ---
@@ -769,10 +767,12 @@ test('usersList_ tidak pernah mengembalikan PasswordHash/PasswordSalt', () => {
   });
 });
 
-test('Owner bisa membuat akun Admin baru; username duplikat ditolak', () => {
-  const created = ctx.usersSave_({ token: ownerToken, nama: 'Admin Baru', username: 'admin1', role: 'Admin', password: 'admin12345' }).user;
-  assert.strictEqual(created.Role, 'Admin');
-  assertThrowsCode(() => ctx.usersSave_({ token: ownerToken, nama: 'Dup', username: 'admin1', role: 'Kasir', password: 'abcdef12' }), 'VALIDATION_ERROR');
+test('Owner bisa membuat akun Kasir baru; username duplikat ditolak; role Admin/Capster sudah tidak valid', () => {
+  const created = ctx.usersSave_({ token: ownerToken, nama: 'Kasir Baru', username: 'kasirbaru1', role: 'Kasir', password: 'kasir12345' }).user;
+  assert.strictEqual(created.Role, 'Kasir');
+  assertThrowsCode(() => ctx.usersSave_({ token: ownerToken, nama: 'Dup', username: 'kasirbaru1', role: 'Kasir', password: 'abcdef12' }), 'VALIDATION_ERROR');
+  assertThrowsCode(() => ctx.usersSave_({ token: ownerToken, nama: 'X', username: 'xadmin', role: 'Admin', password: 'abcdef12' }), 'VALIDATION_ERROR');
+  assertThrowsCode(() => ctx.usersSave_({ token: ownerToken, nama: 'Y', username: 'xcapster', role: 'Capster', password: 'abcdef12' }), 'VALIDATION_ERROR');
 });
 
 test('Kasir dilarang mengelola user (kelolaUser = false)', () => {
@@ -780,10 +780,10 @@ test('Kasir dilarang mengelola user (kelolaUser = false)', () => {
 });
 
 test('Update akun bisa reset password; login lama gagal, password baru berhasil', () => {
-  const admin = ctx.usersSave_({ token: ownerToken, nama: 'Admin Reset', username: 'adminreset', role: 'Admin', password: 'passwordLama1' }).user;
-  ctx.usersSave_({ token: ownerToken, id: admin.ID, nama: 'Admin Reset', username: 'adminreset', role: 'Admin', password: 'passwordBaru9' });
-  assertThrowsCode(() => ctx.authLogin_({ username: 'adminreset', password: 'passwordLama1' }), 'AUTH_INVALID');
-  const login = ctx.authLogin_({ username: 'adminreset', password: 'passwordBaru9' });
+  const user = ctx.usersSave_({ token: ownerToken, nama: 'Kasir Reset', username: 'kasirreset', role: 'Kasir', password: 'passwordLama1' }).user;
+  ctx.usersSave_({ token: ownerToken, id: user.ID, nama: 'Kasir Reset', username: 'kasirreset', role: 'Kasir', password: 'passwordBaru9' });
+  assertThrowsCode(() => ctx.authLogin_({ username: 'kasirreset', password: 'passwordLama1' }), 'AUTH_INVALID');
+  const login = ctx.authLogin_({ username: 'kasirreset', password: 'passwordBaru9' });
   assert.ok(login.token);
 });
 
@@ -797,18 +797,10 @@ test('Owner bisa mengedit diskon & catatan transaksi; GrandTotal dihitung ulang'
   assert.strictEqual(updated.Catatan, 'Dikoreksi Owner');
 });
 
-test('Admin dilarang menghapus transaksi (hapusTransaksi = false untuk Admin); Owner boleh', () => {
-  const salt = ctx.generateSalt_();
-  ctx.appendRowObject_(ctx.SHEETS.KASIR, {
-    ID: ctx.generateId_('USR'), Nama: 'Admin Test', Username: 'admintest', Role: 'Admin',
-    PasswordHash: ctx.hashPassword_('admin12345', salt), PasswordSalt: salt,
-    CapsterID: '', Status: 'Aktif', CreatedAt: new Date(), UpdatedAt: new Date()
-  });
-  const adminToken = ctx.authLogin_({ username: 'admintest', password: 'admin12345' }).token;
-
+test('Kasir dilarang menghapus transaksi (hapusTransaksi = false); Owner boleh', () => {
   const list = ctx.barberListTransaksi_({ token: ownerToken, page: 1, pageSize: 1 }).transaksi;
   const target = list[0];
-  assertThrowsCode(() => ctx.ownerDeleteTransaksi_({ token: adminToken, usaha: 'Barber', id: target.ID }), 'FORBIDDEN');
+  assertThrowsCode(() => ctx.ownerDeleteTransaksi_({ token: kasirToken, usaha: 'Barber', id: target.ID }), 'FORBIDDEN');
 
   const deleted = ctx.ownerDeleteTransaksi_({ token: ownerToken, usaha: 'Barber', id: target.ID }).transaksi;
   assert.strictEqual(deleted.IsDeleted, true);
@@ -885,16 +877,22 @@ test('laporanPengeluaran_ menjumlahkan Barber+Warkop dan total sesuai isi baris'
   assert.ok(laporan.pengeluaran.length > 0);
 });
 
-test('Capster dilarang mengakses Laporan (permission laporan = false)', () => {
+test('Akun lama ber-role Admin/Capster (sudah dihapus dari sistem) otomatis kehilangan semua akses, termasuk Laporan', () => {
+  // Mensimulasikan akun yang dibuat SEBELUM role Admin/Capster dihapus --
+  // baris di sheet Kasir masih menyimpan Role="Admin" apa adanya (tidak ada
+  // migrasi otomatis), jadi hasPermission_ harus tetap aman: role yang tidak
+  // dikenal = tidak ada akses sama sekali, bukan error/crash atau -- lebih
+  // parah -- akses tak sengaja diberikan.
   const salt = ctx.generateSalt_();
   ctx.appendRowObject_(ctx.SHEETS.KASIR, {
-    ID: ctx.generateId_('USR'), Nama: 'Capster Laporan Test', Username: 'capsterlaporan', Role: 'Capster',
-    PasswordHash: ctx.hashPassword_('capster123', salt), PasswordSalt: salt,
+    ID: ctx.generateId_('USR'), Nama: 'Akun Admin Lama', Username: 'adminlama', Role: 'Admin',
+    PasswordHash: ctx.hashPassword_('admin123', salt), PasswordSalt: salt,
     CapsterID: '', Status: 'Aktif', CreatedAt: new Date(), UpdatedAt: new Date()
   });
-  const token = ctx.authLogin_({ username: 'capsterlaporan', password: 'capster123' }).token;
+  const token = ctx.authLogin_({ username: 'adminlama', password: 'admin123' }).token;
   assertThrowsCode(() => ctx.laporanTransaksi_({ token, usaha: 'Barber', filter: 'today' }), 'FORBIDDEN');
   assertThrowsCode(() => ctx.laporanPengeluaran_({ token, usaha: 'Barber', filter: 'today' }), 'FORBIDDEN');
+  assertThrowsCode(() => ctx.dashboardData_({ token, usaha: 'Barber', filter: 'today' }), 'FORBIDDEN');
 });
 
 test('laporanTransaksi_ menghormati filter custom rentang tanggal', () => {

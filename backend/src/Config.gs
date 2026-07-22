@@ -35,37 +35,28 @@ var SHEETS = {
 };
 
 // Role & permission matrix
+// Fase awal punya 4 role (Owner/Admin/Kasir/Capster). Atas permintaan pemilik
+// usaha, role Admin & Capster (LOGIN role -- beda dengan entitas Capster/
+// karyawan potong rambut di SHEETS.CAPSTER yang tetap ada) dihapus; semua
+// kewenangan yang dulu dimiliki Admin sekarang melekat langsung ke Kasir.
 var ROLES = {
   OWNER: 'Owner',
-  ADMIN: 'Admin',
-  KASIR: 'Kasir',
-  CAPSTER: 'Capster'
+  KASIR: 'Kasir'
 };
 
 // Daftar modul/aksi yang dapat dibatasi per role.
 // true = boleh akses. Dicek lewat Auth.hasPermission(role, permission).
+// reopenShift TETAP false untuk Kasir (tidak ikut digabung dari Admin lama)
+// atas permintaan pemilik usaha: shift yang sudah ditutup tidak boleh dibuka
+// lagi oleh Kasir, hanya Owner yang bisa.
 var PERMISSIONS = {
   Owner: { all: true },
-  Admin: {
+  Kasir: {
     dashboard: true, transaksiBarber: true, transaksiWarkop: true,
     inventory: true, pelanggan: true, pengeluaran: true, closingShift: true,
     gajiCapster: true, laporan: true, kelolaLayananProduk: true, kelolaCapster: true,
     kelolaSettings: false, auditLog: true, kelolaUser: false, backupRestore: false,
-    editTransaksi: true, hapusTransaksi: false, reopenShift: true
-  },
-  Kasir: {
-    dashboard: true, transaksiBarber: true, transaksiWarkop: true,
-    inventory: false, pelanggan: true, pengeluaran: true, closingShift: true,
-    gajiCapster: false, laporan: true, kelolaLayananProduk: false, kelolaCapster: false,
-    kelolaSettings: false, auditLog: false, kelolaUser: false, backupRestore: false,
-    editTransaksi: false, hapusTransaksi: false, reopenShift: false
-  },
-  Capster: {
-    dashboard: true, transaksiBarber: true, transaksiWarkop: false,
-    inventory: false, pelanggan: true, pengeluaran: false, closingShift: false,
-    gajiCapster: false, laporan: false, kelolaLayananProduk: false, kelolaCapster: false,
-    kelolaSettings: false, auditLog: false, kelolaUser: false, backupRestore: false,
-    editTransaksi: false, hapusTransaksi: false, reopenShift: false
+    editTransaksi: true, hapusTransaksi: false, reopenShift: false
   }
 };
 
