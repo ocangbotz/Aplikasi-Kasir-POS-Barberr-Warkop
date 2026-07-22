@@ -7,7 +7,7 @@
 var APP_CONFIG = {
   APP_NAME: 'Kasir Barber & Warkop',
   VERSION: '1.0.0',
-  TIMEZONE: 'Asia/Jakarta',
+  TIMEZONE: 'Asia/Makassar',
   SESSION_TTL_HOURS: 12,
   DEFAULT_LOW_STOCK_THRESHOLD: 5,
   // 1 poin loyalti didapat tiap kelipatan belanja segini (Rupiah).
