@@ -116,12 +116,17 @@ test('requireAuth_ menerima token valid & menolak token acak', () => {
   assertThrowsCode(() => ctx.requireAuth_('token-acak-tidak-valid'), 'AUTH_REQUIRED');
 });
 
-test('Permission matrix: Owner boleh semua, Kasir dilarang kelolaUser tapi boleh hal-hal yang dulu milik Admin', () => {
+test('Permission matrix: Owner boleh semua, Kasir dilarang menu Owner Panel tapi boleh hal-hal operasional yang dulu milik Admin', () => {
   assert.strictEqual(ctx.hasPermission_('Owner', 'kelolaUser'), true);
   assert.strictEqual(ctx.hasPermission_('Kasir', 'kelolaUser'), false);
   assert.strictEqual(ctx.hasPermission_('Kasir', 'transaksiBarber'), true);
   assert.strictEqual(ctx.hasPermission_('Kasir', 'inventory'), true, 'kewenangan Admin lama sudah melekat ke Kasir');
   assert.strictEqual(ctx.hasPermission_('Kasir', 'gajiCapster'), true, 'kewenangan Admin lama sudah melekat ke Kasir');
+  // Menu "Owner Panel" (Kelola User, Kelola Transaksi, Audit Log, Backup & Restore)
+  // TETAP khusus Owner, tidak ikut digabung ke Kasir.
+  assert.strictEqual(ctx.hasPermission_('Kasir', 'editTransaksi'), false, 'Owner Panel tetap khusus Owner');
+  assert.strictEqual(ctx.hasPermission_('Kasir', 'auditLog'), false, 'Owner Panel tetap khusus Owner');
+  assert.strictEqual(ctx.hasPermission_('Kasir', 'backupRestore'), false, 'Owner Panel tetap khusus Owner');
   assert.strictEqual(ctx.hasPermission_('Admin', 'transaksiBarber'), false, 'role Admin sudah dihapus, tidak boleh punya akses apapun lagi');
   assert.strictEqual(ctx.hasPermission_('Capster', 'transaksiBarber'), false, 'role Capster sudah dihapus, tidak boleh punya akses apapun lagi');
 });
@@ -795,6 +800,16 @@ test('Owner bisa mengedit diskon & catatan transaksi; GrandTotal dihitung ulang'
   assert.strictEqual(updated.Diskon, 5000);
   assert.strictEqual(updated.GrandTotal, ctx.round2_(updated.Subtotal - 5000));
   assert.strictEqual(updated.Catatan, 'Dikoreksi Owner');
+});
+
+test('Kasir dilarang mengedit transaksi lama (editTransaksi = false); menu Kelola Transaksi khusus Owner', () => {
+  const list = ctx.barberListTransaksi_({ token: ownerToken, page: 1, pageSize: 1 }).transaksi;
+  const target = list[0];
+  assertThrowsCode(() => ctx.ownerUpdateTransaksi_({ token: kasirToken, usaha: 'Barber', id: target.ID, diskon: 1000, catatan: 'X' }), 'FORBIDDEN');
+});
+
+test('Kasir dilarang melihat Audit Log (auditLog = false); menu Audit Log khusus Owner', () => {
+  assertThrowsCode(() => ctx.auditLogList_({ token: kasirToken, page: 1, pageSize: 10 }), 'FORBIDDEN');
 });
 
 test('Kasir dilarang menghapus transaksi (hapusTransaksi = false); Owner boleh', () => {

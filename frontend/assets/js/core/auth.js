@@ -18,8 +18,8 @@ const PERMISSIONS = {
     dashboard: true, transaksiBarber: true, transaksiWarkop: true,
     inventory: true, pelanggan: true, pengeluaran: true, closingShift: true,
     gajiCapster: true, laporan: true, kelolaLayananProduk: true, kelolaCapster: true,
-    auditLog: true, kelolaUser: false, backupRestore: false,
-    editTransaksi: true, hapusTransaksi: false, reopenShift: false
+    auditLog: false, kelolaUser: false, backupRestore: false,
+    editTransaksi: false, hapusTransaksi: false, reopenShift: false
   }
 };
 
