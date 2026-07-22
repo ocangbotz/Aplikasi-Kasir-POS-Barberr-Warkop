@@ -84,11 +84,28 @@ function nowTimeString_() {
   return formatDate_(new Date(), 'HH:mm:ss');
 }
 
+// Kolom yang HARUS berupa string tanggal ('yyyy-MM-dd'/'yyyy-MM'), dibandingkan
+// sebagai teks di banyak tempat (filter periode, pencocokan bulan gaji, dst).
+// Google Sheets kadang diam-diam mengonversi sel yang isinya "terlihat seperti
+// tanggal" (mis. "2026-07-22") menjadi tipe Date sungguhan -- getValues() lalu
+// mengembalikan objek Date, bukan string aslinya, dan perbandingan string
+// (>=, ===, indexOf) jadi salah tanpa error apa pun (silently wrong).
+// SetupDatabase.gs sudah memformat kolom ini sebagai Plain Text supaya tidak
+// terkonversi LAGI ke depannya, tapi baris yang SUDAH terlanjur tersimpan
+// sebagai Date (dibuat sebelum fix ini) tetap perlu dinormalkan di sini setiap
+// kali dibaca, supaya data lama juga otomatis benar tanpa perlu dihapus manual.
+var DATE_STRING_FIELDS_ = { Tanggal: 'yyyy-MM-dd', TanggalShift: 'yyyy-MM-dd', Periode: 'yyyy-MM' };
+
 /** Ubah baris sheet (array) menjadi object memakai header sebagai key. */
 function rowToObject_(headers, row) {
   var obj = {};
   for (var i = 0; i < headers.length; i++) {
-    obj[headers[i]] = row[i] !== undefined ? row[i] : '';
+    var value = row[i] !== undefined ? row[i] : '';
+    var datePattern = DATE_STRING_FIELDS_[headers[i]];
+    if (datePattern && value instanceof Date) {
+      value = formatDate_(value, datePattern);
+    }
+    obj[headers[i]] = value;
   }
   return obj;
 }

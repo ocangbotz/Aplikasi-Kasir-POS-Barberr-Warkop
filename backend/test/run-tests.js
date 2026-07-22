@@ -508,6 +508,31 @@ test('dashboardData_ Barber: hariIni & periodeMetrics (filter today) mencerminka
   assert.strictEqual(after.hariIni.cash, ctx.round2_(before.hariIni.cash + trx.GrandTotal));
 });
 
+test('rowToObject_ menormalkan kolom Tanggal yang sudah ter-konversi Google Sheets jadi Date (bug produksi nyata)', () => {
+  const before = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+  const trx = ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Simulasi Sheets Auto-Convert', noHp: '081200077766', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Cash'
+  }).transaksi;
+
+  // Simulasikan persis apa yang terjadi di Google Sheets sungguhan: sel
+  // "Tanggal" yang ditulis sebagai string "yyyy-MM-dd" diam-diam berubah jadi
+  // tipe Date asli saat dibaca ulang (Sheets "sok tau" karena isinya terlihat
+  // seperti tanggal). Timpa LANGSUNG baris mentah di mock sheet (bypass semua
+  // business logic) supaya persis meniru kondisi produksi yang dilaporkan user.
+  const data = ctx.getSheetData_(ctx.SHEETS.TRANSAKSI_BARBER);
+  const tanggalCol = data.headers.indexOf('Tanggal');
+  const rowIdx = data.rows.findIndex((r) => r.ID === trx.ID);
+  assert.ok(rowIdx !== -1, 'baris transaksi harus ditemukan');
+  data.sheet.data[rowIdx + 1][tanggalCol] = new Date(ctx.todayDateString_() + 'T12:00:00');
+
+  const after = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+  assert.strictEqual(after.hariIni.pendapatan, ctx.round2_(before.hariIni.pendapatan + trx.GrandTotal),
+    'transaksi dengan kolom Tanggal ber-tipe Date (bukan string) harus TETAP terhitung sebagai hari ini');
+  assert.strictEqual(after.hariIni.transaksi, before.hariIni.transaksi + 1);
+});
+
 test('dashboardData_: Laba Bersih selalu = Pendapatan - Pengeluaran (Barber, Warkop, Gabungan)', () => {
   ['Barber', 'Warkop', 'Gabungan'].forEach((usaha) => {
     const data = ctx.dashboardData_({ token: ownerToken, usaha, filter: 'today' });
