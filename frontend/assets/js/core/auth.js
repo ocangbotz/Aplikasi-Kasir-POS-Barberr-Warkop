@@ -19,7 +19,7 @@ const PERMISSIONS = {
     inventory: true, pelanggan: true, pengeluaran: true, closingShift: true,
     gajiCapster: true, laporan: true, kelolaLayananProduk: true, kelolaCapster: true,
     auditLog: true, kelolaUser: false, backupRestore: false,
-    editTransaksi: true, hapusTransaksi: false, reopenShift: true
+    editTransaksi: true, hapusTransaksi: false, reopenShift: false
   }
 };
 

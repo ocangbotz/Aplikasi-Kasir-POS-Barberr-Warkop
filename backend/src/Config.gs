@@ -46,6 +46,9 @@ var ROLES = {
 
 // Daftar modul/aksi yang dapat dibatasi per role.
 // true = boleh akses. Dicek lewat Auth.hasPermission(role, permission).
+// reopenShift TETAP false untuk Kasir (tidak ikut digabung dari Admin lama)
+// atas permintaan pemilik usaha: shift yang sudah ditutup tidak boleh dibuka
+// lagi oleh Kasir, hanya Owner yang bisa.
 var PERMISSIONS = {
   Owner: { all: true },
   Kasir: {
@@ -53,7 +56,7 @@ var PERMISSIONS = {
     inventory: true, pelanggan: true, pengeluaran: true, closingShift: true,
     gajiCapster: true, laporan: true, kelolaLayananProduk: true, kelolaCapster: true,
     kelolaSettings: false, auditLog: true, kelolaUser: false, backupRestore: false,
-    editTransaksi: true, hapusTransaksi: false, reopenShift: true
+    editTransaksi: true, hapusTransaksi: false, reopenShift: false
   }
 };
 

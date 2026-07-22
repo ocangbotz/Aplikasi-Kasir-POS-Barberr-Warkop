@@ -700,11 +700,13 @@ test('Shift yang sudah ditutup tidak bisa ditutup lagi (tidak ada shift terbuka)
   assertThrowsCode(() => ctx.shiftClose_({ token: kasirToken, uangKasFisik: 1000 }), 'VALIDATION_ERROR');
 });
 
-test('Kasir kini boleh membuka kembali shift (kewenangan Admin lama sudah melekat ke Kasir)', () => {
+test('Kasir dilarang membuka kembali shift (reopenShift = false); Owner boleh', () => {
   const lastShift = ctx.shiftList_({ token: ownerToken, pageSize: 1 }).shift[0];
-  const reopened = ctx.shiftReopen_({ token: kasirToken, id: lastShift.ID }).shift;
+  assertThrowsCode(() => ctx.shiftReopen_({ token: kasirToken, id: lastShift.ID }), 'FORBIDDEN');
+
+  const reopened = ctx.shiftReopen_({ token: ownerToken, id: lastShift.ID }).shift;
   assert.strictEqual(reopened.Status, 'Terbuka');
-  assert.strictEqual(reopened.ReopenedBy, 'Siti Kasir');
+  assert.strictEqual(reopened.ReopenedBy, 'Owner');
   // Tutup lagi supaya tidak mengganggu test lain yang mengasumsikan tidak ada shift terbuka.
   ctx.shiftClose_({ token: kasirToken, uangKasFisik: 0 });
 });
