@@ -65,16 +65,17 @@ SHEET_SCHEMAS_[SHEETS.AUDIT_LOG] = [
 ];
 SHEET_SCHEMAS_[SHEETS.SETTINGS] = ['Key', 'Value', 'UpdatedAt'];
 
-// Kolom-kolom ini HARUS tetap Plain Text -- isinya string tanggal ('yyyy-MM-dd'/
-// 'yyyy-MM') yang dibandingkan sebagai TEKS di banyak tempat (filter periode
-// Dashboard/Laporan, pencocokan bulan Gaji Capster, dst). Tanpa format Plain
-// Text, Google Sheets diam-diam mengonversi nilai yang "terlihat seperti
-// tanggal" jadi tipe Date sungguhan saat ditulis, membuat semua perbandingan
-// teks itu gagal TANPA error apa pun (lihat juga rowToObject_ di Utils.gs
-// yang menormalkan balik baris LAMA yang mungkin sudah terlanjur ke-convert).
+// Kolom-kolom ini HARUS tetap Plain Text -- isinya string tanggal/jam
+// ('yyyy-MM-dd'/'yyyy-MM'/'HH:mm:ss') yang dibandingkan atau di-slice sebagai
+// TEKS di banyak tempat (filter periode Dashboard/Laporan, pencocokan bulan
+// Gaji Capster, granularitas grafik per jam, dst). Tanpa format Plain Text,
+// Google Sheets diam-diam mengonversi nilai yang "terlihat seperti tanggal/jam"
+// jadi tipe Date/Time sungguhan saat ditulis, membuat semua perbandingan/method
+// teks itu gagal atau crash TANPA error yang jelas (lihat juga rowToObject_ di
+// Utils.gs yang menormalkan balik baris LAMA yang mungkin sudah terlanjur ke-convert).
 var TEXT_FORMAT_COLUMNS_ = {};
-TEXT_FORMAT_COLUMNS_[SHEETS.TRANSAKSI_BARBER] = ['Tanggal'];
-TEXT_FORMAT_COLUMNS_[SHEETS.TRANSAKSI_WARKOP] = ['Tanggal'];
+TEXT_FORMAT_COLUMNS_[SHEETS.TRANSAKSI_BARBER] = ['Tanggal', 'Jam'];
+TEXT_FORMAT_COLUMNS_[SHEETS.TRANSAKSI_WARKOP] = ['Tanggal', 'Jam'];
 TEXT_FORMAT_COLUMNS_[SHEETS.PENGELUARAN_BARBER] = ['Tanggal'];
 TEXT_FORMAT_COLUMNS_[SHEETS.PENGELUARAN_WARKOP] = ['Tanggal'];
 TEXT_FORMAT_COLUMNS_[SHEETS.CLOSING_SHIFT] = ['TanggalShift'];
