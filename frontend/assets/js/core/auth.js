@@ -11,28 +11,15 @@ import { storage } from './storage.js';
 import { createStore } from './state.js';
 
 // Salinan ringan dari backend/src/Config.gs PERMISSIONS, dipakai untuk UI gating saja.
+// Role Admin & Capster (login role) sudah dihapus -- kewenangannya melekat ke Kasir.
 const PERMISSIONS = {
   Owner: { all: true },
-  Admin: {
-    dashboard: true, transaksiBarber: true, transaksiWarkop: true,
-    inventory: true, pelanggan: true, pengeluaran: true, closingShift: true,
-    gajiCapster: true, laporan: true, kelolaLayananProduk: true,
-    auditLog: true, kelolaUser: false, backupRestore: false,
-    editTransaksi: true, hapusTransaksi: false, reopenShift: true
-  },
   Kasir: {
     dashboard: true, transaksiBarber: true, transaksiWarkop: true,
-    inventory: false, pelanggan: true, pengeluaran: true, closingShift: true,
-    gajiCapster: false, laporan: true, kelolaLayananProduk: false,
-    auditLog: false, kelolaUser: false, backupRestore: false,
-    editTransaksi: false, hapusTransaksi: false, reopenShift: false
-  },
-  Capster: {
-    dashboard: true, transaksiBarber: true, transaksiWarkop: false,
-    inventory: false, pelanggan: true, pengeluaran: false, closingShift: false,
-    gajiCapster: false, laporan: false, kelolaLayananProduk: false,
-    auditLog: false, kelolaUser: false, backupRestore: false,
-    editTransaksi: false, hapusTransaksi: false, reopenShift: false
+    inventory: true, pelanggan: true, pengeluaran: true, closingShift: true,
+    gajiCapster: true, laporan: true, kelolaLayananProduk: true, kelolaCapster: true,
+    auditLog: true, kelolaUser: false, backupRestore: false,
+    editTransaksi: true, hapusTransaksi: false, reopenShift: true
   }
 };
 

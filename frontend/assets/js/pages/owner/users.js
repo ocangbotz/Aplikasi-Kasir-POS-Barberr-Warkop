@@ -5,7 +5,7 @@
 import { apiCall, ApiError } from '../../core/api.js';
 import { toastError, toastSuccess } from '../../core/toast.js';
 
-const ROLES = ['Owner', 'Admin', 'Kasir', 'Capster'];
+const ROLES = ['Owner', 'Kasir'];
 
 export async function renderOwnerUsers(root) {
   root.innerHTML = `
