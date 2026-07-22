@@ -51,11 +51,13 @@ var ROLES = {
 // - reopenShift: shift yang sudah ditutup tidak boleh dibuka lagi oleh Kasir.
 // - editTransaksi & auditLog: mengedit transaksi lama dan melihat jejak
 //   aktivitas seluruh akun tetap kewenangan Owner saja.
+// - inventory: kelola stok barang tetap kewenangan Owner saja, Kasir tidak
+//   perlu melihat/mengubah inventory.
 var PERMISSIONS = {
   Owner: { all: true },
   Kasir: {
     dashboard: true, transaksiBarber: true, transaksiWarkop: true,
-    inventory: true, pelanggan: true, pengeluaran: true, closingShift: true,
+    inventory: false, pelanggan: true, pengeluaran: true, closingShift: true,
     gajiCapster: true, laporan: true, kelolaLayananProduk: true, kelolaCapster: true,
     kelolaSettings: false, auditLog: false, kelolaUser: false, backupRestore: false,
     editTransaksi: false, hapusTransaksi: false, reopenShift: false

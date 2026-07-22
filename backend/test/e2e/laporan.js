@@ -85,6 +85,7 @@ async function main() {
     await page.fill('#namaPelanggan', 'Budi Laporan Test');
     await page.selectOption('#capsterId', { label: 'Rizky' });
     await page.click('button[data-metode="Cash"]');
+    await page.fill('#uangDiterima', '30000');
     await page.click('#submit-btn');
     await page.waitForSelector('#struk-print-area', { timeout: 5000 });
     await page.click('#struk-close');
@@ -104,6 +105,7 @@ async function main() {
     await page.waitForSelector('#produk-grid .produk-card', { timeout: 5000 });
     await page.locator('.produk-card', { hasText: 'Kopi Hitam' }).click();
     await page.click('button[data-metode="Cash"]');
+    await page.fill('#uangDiterima', '8000');
     await page.click('#submit-btn');
     await page.waitForSelector('#struk-print-area', { timeout: 5000 });
     await page.click('#struk-close');

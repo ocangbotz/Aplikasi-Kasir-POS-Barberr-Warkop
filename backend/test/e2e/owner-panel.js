@@ -105,6 +105,7 @@ async function main() {
     await page.fill('#noHp', '081255566677');
     await page.selectOption('#capsterId', { label: 'Rizky' });
     await page.click('button[data-metode="Cash"]');
+    await page.fill('#uangDiterima', '30000');
     await page.click('#submit-btn');
     await page.waitForSelector('#struk-print-area', { timeout: 5000 });
     await page.click('#struk-close');

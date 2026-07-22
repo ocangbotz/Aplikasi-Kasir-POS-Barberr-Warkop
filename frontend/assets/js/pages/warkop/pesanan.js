@@ -60,6 +60,17 @@ export async function renderWarkopPesanan(root) {
           <button type="button" data-metode="QRIS" class="metode-btn option-btn btn-ghost flex-1 border border-slate-200 dark:border-white/10">📱 QRIS</button>
         </div>
 
+        <div id="cash-fields" class="hidden grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Uang Diterima</label>
+            <input id="uangDiterima" type="number" min="0" class="input-field" placeholder="0" />
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Kembalian</label>
+            <p id="kembalian-text" class="input-field flex items-center font-bold text-gabungan-600 dark:text-gabungan-400">Rp0</p>
+          </div>
+        </div>
+
         <div id="split-payment" class="hidden space-y-2">
           <div id="split-rows" class="space-y-2"></div>
           <button type="button" id="add-split-row" class="btn-ghost border border-slate-200 text-xs dark:border-white/10">+ Tambah Pembayaran</button>
@@ -166,14 +177,30 @@ export async function renderWarkopPesanan(root) {
     root.querySelector('#subtotal-text').textContent = formatRupiah(subtotal);
     root.querySelector('#total-text').textContent = formatRupiah(total);
     if (state.splitMode) renderSplitRows();
+    updateKembalian();
   }
   root.querySelector('#diskon').addEventListener('input', updateTotals);
+
+  function updateKembalian() {
+    const { total } = grandTotal();
+    const diterima = Number(root.querySelector('#uangDiterima').value) || 0;
+    const kembalian = Math.max(diterima - total, 0);
+    root.querySelector('#kembalian-text').textContent = formatRupiah(kembalian);
+  }
+  root.querySelector('#uangDiterima').addEventListener('input', updateKembalian);
+
+  const cashFieldsEl = root.querySelector('#cash-fields');
+  function syncCashFieldsVisibility() {
+    cashFieldsEl.classList.toggle('hidden', state.splitMode || state.metode !== 'Cash');
+  }
 
   root.querySelectorAll('.metode-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.metode = btn.dataset.metode;
       root.querySelectorAll('.metode-btn').forEach((b) => b.classList.remove('selected'));
       btn.classList.add('selected');
+      syncCashFieldsVisibility();
+      updateKembalian();
     });
   });
 
@@ -193,6 +220,7 @@ export async function renderWarkopPesanan(root) {
       singlePaymentEl.classList.remove('hidden');
       splitPaymentEl.classList.add('hidden');
     }
+    syncCashFieldsVisibility();
   });
 
   root.querySelector('#add-split-row').addEventListener('click', () => {
@@ -265,6 +293,11 @@ export async function renderWarkopPesanan(root) {
     } else {
       if (!state.metode) return toastError('Pilih metode pembayaran.');
       payload.metodePembayaran = state.metode;
+      if (state.metode === 'Cash') {
+        const uangDiterima = Number(root.querySelector('#uangDiterima').value) || 0;
+        if (uangDiterima < grandTotal().total) return toastError('Uang diterima kurang dari total belanja.');
+        payload.uangDiterima = uangDiterima;
+      }
     }
 
     const submitBtn = root.querySelector('#submit-btn');
@@ -282,6 +315,9 @@ export async function renderWarkopPesanan(root) {
       root.querySelector('#noHp').value = '';
       root.querySelector('#catatan').value = '';
       root.querySelector('#diskon').value = 0;
+      root.querySelector('#uangDiterima').value = '';
+      root.querySelector('#kembalian-text').textContent = 'Rp0';
+      cashFieldsEl.classList.add('hidden');
       splitToggle.checked = false;
       singlePaymentEl.classList.remove('hidden');
       splitPaymentEl.classList.add('hidden');

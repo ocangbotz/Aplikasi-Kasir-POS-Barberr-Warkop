@@ -73,6 +73,17 @@ export async function renderBarberTransaksi(root) {
           </div>
         </div>
 
+        <div id="cash-fields" class="hidden grid gap-3 sm:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Uang Diterima</label>
+            <input id="uangDiterima" type="number" min="0" class="input-field" placeholder="0" />
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-semibold text-slate-600 dark:text-slate-300">Kembalian</label>
+            <p id="kembalian-text" class="input-field flex items-center font-bold text-gabungan-600 dark:text-gabungan-400">Rp0</p>
+          </div>
+        </div>
+
         <button type="submit" id="submit-btn" class="btn-barber w-full">Buat Transaksi & Cetak Struk</button>
       </form>
     </div>
@@ -86,24 +97,25 @@ export async function renderBarberTransaksi(root) {
   function renderLayananGrid() {
     const grid = root.querySelector('#layanan-grid');
     grid.innerHTML = state.layanan.map((l) => {
-      const selected = state.cart.some((c) => c.layananId === l.ID);
+      const inCart = state.cart.find((c) => c.layananId === l.ID);
       return `
         <button type="button" data-id="${l.ID}" class="layanan-card rounded-xl border p-3 text-left text-xs transition
-          ${selected ? 'border-barber-500 bg-barber-50 dark:bg-barber-500/10' : 'border-slate-200 hover:border-barber-300 dark:border-white/10'}">
+          ${inCart ? 'border-barber-500 bg-barber-50 dark:bg-barber-500/10' : 'border-slate-200 hover:border-barber-300 dark:border-white/10'}">
           <p class="font-semibold text-slate-900 dark:text-white">${l.Nama}</p>
           <p class="mt-1 text-slate-500 dark:text-slate-400">${formatRupiah(l.Harga)}</p>
+          ${inCart ? `<p class="mt-1 text-[10px] text-barber-600 dark:text-barber-300">di keranjang: ${inCart.qty}</p>` : ''}
         </button>`;
     }).join('') || '<p class="col-span-full text-sm text-slate-400">Belum ada layanan aktif. Tambahkan lewat menu Layanan Barber.</p>';
 
     grid.querySelectorAll('.layanan-card').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.dataset.id;
-        const idx = state.cart.findIndex((c) => c.layananId === id);
-        if (idx === -1) {
-          const l = state.layanan.find((x) => x.ID === id);
-          state.cart.push({ layananId: l.ID, nama: l.Nama, harga: l.Harga });
+        const existing = state.cart.find((c) => c.layananId === id);
+        if (existing) {
+          existing.qty += 1;
         } else {
-          state.cart.splice(idx, 1);
+          const l = state.layanan.find((x) => x.ID === id);
+          state.cart.push({ layananId: l.ID, nama: l.Nama, harga: l.Harga, qty: 1 });
         }
         renderLayananGrid();
         renderCart();
@@ -117,13 +129,29 @@ export async function renderBarberTransaksi(root) {
       list.innerHTML = '<p class="text-slate-400">Belum ada layanan dipilih.</p>';
     } else {
       list.innerHTML = state.cart.map((c, i) => `
-        <div class="flex items-center justify-between rounded-lg bg-slate-900/5 px-2 py-1.5 dark:bg-white/5">
-          <span>${c.nama}</span>
-          <span class="flex items-center gap-2">
-            ${formatRupiah(c.harga)}
-            <button type="button" data-idx="${i}" class="remove-item text-red-500">✕</button>
-          </span>
+        <div class="flex items-center justify-between gap-2 rounded-lg bg-slate-900/5 px-2 py-1.5 dark:bg-white/5">
+          <span class="flex-1">${c.nama}</span>
+          <div class="flex items-center gap-1.5">
+            <button type="button" data-idx="${i}" class="qty-minus rounded bg-white px-1.5 dark:bg-slate-800">-</button>
+            <span class="w-5 text-center">${c.qty}</span>
+            <button type="button" data-idx="${i}" class="qty-plus rounded bg-white px-1.5 dark:bg-slate-800">+</button>
+          </div>
+          <span class="w-20 text-right">${formatRupiah(c.harga * c.qty)}</span>
+          <button type="button" data-idx="${i}" class="remove-item text-red-500">✕</button>
         </div>`).join('');
+
+      list.querySelectorAll('.qty-plus').forEach((btn) => btn.addEventListener('click', () => {
+        state.cart[Number(btn.dataset.idx)].qty += 1;
+        renderLayananGrid();
+        renderCart();
+      }));
+      list.querySelectorAll('.qty-minus').forEach((btn) => btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.idx);
+        state.cart[idx].qty -= 1;
+        if (state.cart[idx].qty <= 0) state.cart.splice(idx, 1);
+        renderLayananGrid();
+        renderCart();
+      }));
       list.querySelectorAll('.remove-item').forEach((btn) => {
         btn.addEventListener('click', () => {
           state.cart.splice(Number(btn.dataset.idx), 1);
@@ -135,11 +163,25 @@ export async function renderBarberTransaksi(root) {
     updateTotals();
   }
 
+  function currentTotal() {
+    const subtotal = state.cart.reduce((sum, c) => sum + c.harga * c.qty, 0);
+    const diskon = Math.min(Math.max(Number(root.querySelector('#diskon').value) || 0, 0), subtotal);
+    return subtotal - diskon;
+  }
+
+  function updateKembalian() {
+    const diterima = Number(root.querySelector('#uangDiterima').value) || 0;
+    const kembalian = Math.max(diterima - currentTotal(), 0);
+    root.querySelector('#kembalian-text').textContent = formatRupiah(kembalian);
+  }
+  root.querySelector('#uangDiterima').addEventListener('input', updateKembalian);
+
   function updateTotals() {
-    const subtotal = state.cart.reduce((sum, c) => sum + c.harga, 0);
+    const subtotal = state.cart.reduce((sum, c) => sum + c.harga * c.qty, 0);
     const diskon = Math.min(Math.max(Number(root.querySelector('#diskon').value) || 0, 0), subtotal);
     root.querySelector('#subtotal-text').textContent = formatRupiah(subtotal);
     root.querySelector('#total-text').textContent = formatRupiah(subtotal - diskon);
+    updateKembalian();
   }
   root.querySelector('#diskon').addEventListener('input', updateTotals);
 
@@ -148,6 +190,8 @@ export async function renderBarberTransaksi(root) {
       state.metode = btn.dataset.metode;
       root.querySelectorAll('.metode-btn').forEach((b) => b.classList.remove('selected'));
       btn.classList.add('selected');
+      root.querySelector('#cash-fields').classList.toggle('hidden', state.metode !== 'Cash');
+      updateKembalian();
     });
   });
 
@@ -214,6 +258,11 @@ export async function renderBarberTransaksi(root) {
     if (state.cart.length === 0) return toastError('Pilih minimal 1 layanan.');
     if (!state.metode) return toastError('Pilih metode pembayaran.');
 
+    const uangDiterima = Number(root.querySelector('#uangDiterima').value) || 0;
+    if (state.metode === 'Cash' && uangDiterima < currentTotal()) {
+      return toastError('Uang diterima kurang dari total belanja.');
+    }
+
     const submitBtn = root.querySelector('#submit-btn');
     submitBtn.disabled = true;
     try {
@@ -227,7 +276,8 @@ export async function renderBarberTransaksi(root) {
         status: root.querySelector('#status').value,
         tanggal: root.querySelector('#tanggal').value,
         jam: root.querySelector('#jam').value,
-        metodePembayaran: state.metode
+        metodePembayaran: state.metode,
+        uangDiterima
       });
       toastSuccess(`Transaksi ${transaksi.NomorTransaksi} berhasil dibuat.`);
       await openStrukModal(transaksi);
@@ -238,6 +288,9 @@ export async function renderBarberTransaksi(root) {
       noHpInput.value = '';
       root.querySelector('#catatan').value = '';
       root.querySelector('#diskon').value = 0;
+      root.querySelector('#uangDiterima').value = '';
+      root.querySelector('#cash-fields').classList.add('hidden');
+      root.querySelector('#kembalian-text').textContent = 'Rp0';
       root.querySelectorAll('.metode-btn').forEach((b) => b.classList.remove('selected'));
       renderLayananGrid();
       renderCart();

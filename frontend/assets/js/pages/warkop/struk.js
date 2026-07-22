@@ -19,6 +19,11 @@ function strukHtml(transaksi, settings) {
         <div class="flex justify-between"><span>Bayar (${s.metode})</span><span>${formatRupiah(s.jumlah)}</span></div>`).join('')
     : `<div class="flex justify-between"><span>Bayar</span><span>${transaksi.MetodePembayaran}</span></div>`;
 
+  const cashBlock = !isSplit && transaksi.MetodePembayaran === 'Cash'
+    ? `<div class="flex justify-between"><span>Uang Diterima</span><span>${formatRupiah(transaksi.UangDiterima)}</span></div>
+       <div class="flex justify-between"><span>Kembalian</span><span>${formatRupiah(transaksi.Kembalian)}</span></div>`
+    : '';
+
   const qrisBlock = !isSplit && transaksi.MetodePembayaran === 'QRIS' && settings.qris_image_url
     ? `<div class="mt-3 flex flex-col items-center">
          <img src="${settings.qris_image_url}" alt="QRIS" class="h-32 w-32 object-contain" />
@@ -50,6 +55,7 @@ function strukHtml(transaksi, settings) {
       <div class="flex justify-between"><span>Diskon</span><span>-${formatRupiah(transaksi.Diskon)}</span></div>
       <div class="flex justify-between text-sm font-bold"><span>Total</span><span>${formatRupiah(transaksi.GrandTotal)}</span></div>
       ${bayarHtml}
+      ${cashBlock}
       ${qrisBlock}
       <div class="my-2 border-t border-dashed border-slate-400"></div>
       <p class="text-center">Terima kasih atas kunjungan Anda!</p>

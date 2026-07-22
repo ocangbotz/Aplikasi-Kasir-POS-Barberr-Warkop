@@ -188,8 +188,15 @@ async function main() {
     // --- Transaksi biasa (single payment) untuk verifikasi riwayat ---
     await page.locator('.produk-card', { hasText: 'Kopi Hitam' }).click();
     await page.click('button[data-metode="Cash"]');
+    await page.fill('#uangDiterima', '10000');
     await page.click('#submit-btn');
     await page.waitForSelector('#struk-print-area', { timeout: 5000 });
+    const singleStrukText = await page.locator('#struk-print-area').innerText();
+    if (singleStrukText.includes('Uang Diterima') && singleStrukText.includes('Kembalian')) {
+      ok('Struk transaksi Cash biasa menampilkan Uang Diterima & Kembalian');
+    } else {
+      bad('Uang Diterima/Kembalian tidak tampil di struk transaksi biasa: ' + singleStrukText);
+    }
     await page.click('#struk-close');
 
     await page.evaluate(() => { location.hash = '#/warkop/riwayat'; });

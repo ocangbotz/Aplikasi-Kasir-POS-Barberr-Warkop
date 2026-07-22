@@ -10,9 +10,14 @@ function strukHtml(transaksi, settings) {
   const items = Array.isArray(transaksi.Layanan) ? transaksi.Layanan : [];
   const itemsHtml = items.map((it) => `
     <div class="flex justify-between gap-2 py-0.5">
-      <span>${it.nama}</span>
-      <span>${formatRupiah(it.harga)}</span>
+      <span>${it.nama}${it.qty > 1 ? ' x' + it.qty : ''}</span>
+      <span>${formatRupiah(it.harga * (it.qty || 1))}</span>
     </div>`).join('');
+
+  const cashBlock = transaksi.MetodePembayaran === 'Cash'
+    ? `<div class="flex justify-between"><span>Uang Diterima</span><span>${formatRupiah(transaksi.UangDiterima)}</span></div>
+       <div class="flex justify-between"><span>Kembalian</span><span>${formatRupiah(transaksi.Kembalian)}</span></div>`
+    : '';
 
   const qrisBlock = transaksi.MetodePembayaran === 'QRIS' && settings.qris_image_url
     ? `<div class="mt-3 flex flex-col items-center">
@@ -47,6 +52,7 @@ function strukHtml(transaksi, settings) {
       <div class="flex justify-between"><span>Diskon</span><span>-${formatRupiah(transaksi.Diskon)}</span></div>
       <div class="flex justify-between text-sm font-bold"><span>Total</span><span>${formatRupiah(transaksi.GrandTotal)}</span></div>
       <div class="flex justify-between"><span>Bayar</span><span>${transaksi.MetodePembayaran}</span></div>
+      ${cashBlock}
       ${qrisBlock}
       <div class="my-2 border-t border-dashed border-slate-400"></div>
       <p class="text-center">Terima kasih atas kunjungan Anda!</p>

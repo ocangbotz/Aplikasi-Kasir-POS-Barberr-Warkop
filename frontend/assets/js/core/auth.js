@@ -16,7 +16,7 @@ const PERMISSIONS = {
   Owner: { all: true },
   Kasir: {
     dashboard: true, transaksiBarber: true, transaksiWarkop: true,
-    inventory: true, pelanggan: true, pengeluaran: true, closingShift: true,
+    inventory: false, pelanggan: true, pengeluaran: true, closingShift: true,
     gajiCapster: true, laporan: true, kelolaLayananProduk: true, kelolaCapster: true,
     auditLog: false, kelolaUser: false, backupRestore: false,
     editTransaksi: false, hapusTransaksi: false, reopenShift: false

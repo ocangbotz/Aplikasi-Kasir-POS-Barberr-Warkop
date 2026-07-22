@@ -15,7 +15,7 @@ function flattenBarberTransaksi_(row) {
     nomorTransaksi: row.NomorTransaksi,
     tanggal: row.Tanggal,
     jam: row.Jam,
-    deskripsi: row.NamaPelanggan + ' — ' + layanan.map(function (l) { return l.nama; }).join(', ') + ' (Capster: ' + row.NamaCapster + ')',
+    deskripsi: row.NamaPelanggan + ' — ' + layanan.map(function (l) { return l.qty > 1 ? l.nama + ' x' + l.qty : l.nama; }).join(', ') + ' (Capster: ' + row.NamaCapster + ')',
     namaKasir: row.NamaKasir,
     subtotal: Number(row.Subtotal),
     diskon: Number(row.Diskon),

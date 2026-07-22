@@ -7,6 +7,7 @@
  * backend/src/Dashboard.gs.
  */
 import { formatRupiah, todayISODate } from '../../core/format.js';
+import { getCurrentUser } from '../../core/auth.js';
 
 const FILTERS = [
   { value: 'today', label: 'Hari Ini' },
@@ -16,6 +17,17 @@ const FILTERS = [
   { value: 'year', label: 'Tahun Ini' },
   { value: 'custom', label: 'Custom' }
 ];
+
+/**
+ * Kasir hanya butuh lihat data "Hari Ini" (permintaan pemilik usaha, supaya
+ * tampilan Dashboard/Laporan tidak membingungkan kasir) -- Owner tetap bisa
+ * pilih periode apapun.
+ */
+function availableFilters() {
+  const user = getCurrentUser();
+  if (user && user.role !== 'Owner') return FILTERS.filter((f) => f.value === 'today');
+  return FILTERS;
+}
 
 export function filterBarHtml() {
   return `
@@ -52,7 +64,7 @@ export function wireFilterBar(root, onChange, accentClass) {
   customEnd.value = todayISODate();
 
   function renderChips() {
-    chips.innerHTML = FILTERS.map((f) => `
+    chips.innerHTML = availableFilters().map((f) => `
       <button type="button" data-filter="${f.value}" class="filter-chip rounded-full border px-3 py-1 text-xs font-medium transition
         ${f.value === state.filter ? accentClass + ' border-transparent' : 'border-slate-200 text-slate-600 hover:border-slate-300 dark:border-white/10 dark:text-slate-300'}">
         ${f.label}
