@@ -40,15 +40,38 @@ function createMockGas() {
     setFontWeight() { return this; }
     setBackground() { return this; }
     setFontColor() { return this; }
+    // Mock tidak melacak formatting sel (cuma nilai) -- cukup no-op supaya
+    // kode yang mengunci kolom sebagai Plain Text (lihat SetupDatabase.gs)
+    // bisa jalan tanpa error saat ditest, walau efeknya cuma nyata di
+    // Google Sheets sungguhan.
+    setNumberFormat() { return this; }
     clearContent() {
       this.sheet.data.splice(this.row - 1, this.numRows);
       return this;
     }
   }
 
+  function a1ColToIndex_(letters) {
+    let idx = 0;
+    for (let i = 0; i < letters.length; i++) idx = idx * 26 + (letters.charCodeAt(i) - 64);
+    return idx;
+  }
+
   class MockSheet {
     constructor(name) { this.name = name; this.data = []; }
-    getRange(row, col, numRows, numCols) { return new MockRange(this, row, col, numRows || 1, numCols || 1); }
+    getRange(a, b, c, d) {
+      // Notasi A1 (mis. "C2:C" dari SetupDatabase.gs) -- cukup diparse cukup
+      // baik untuk tidak error; presisi baris/kolom tidak krusial di sini
+      // karena satu-satunya pemakaian saat ini (setNumberFormat) adalah no-op.
+      if (typeof a === 'string') {
+        const range = /^([A-Z]+)(\d+)?:([A-Z]+)(\d+)?$/.exec(a);
+        if (range) return new MockRange(this, Number(range[2]) || 1, a1ColToIndex_(range[1]), 1, 1);
+        const cell = /^([A-Z]+)(\d+)$/.exec(a);
+        if (cell) return new MockRange(this, Number(cell[2]), a1ColToIndex_(cell[1]), 1, 1);
+        throw new Error('Mock getRange(): notasi A1 tidak didukung: ' + a);
+      }
+      return new MockRange(this, a, b, c || 1, d || 1);
+    }
     getLastRow() { return this.data.length; }
     getLastColumn() { return this.data.reduce((max, row) => Math.max(max, row.length), 0); }
     appendRow(rowArr) { this.data.push(rowArr.slice()); }

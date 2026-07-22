@@ -65,6 +65,22 @@ SHEET_SCHEMAS_[SHEETS.AUDIT_LOG] = [
 ];
 SHEET_SCHEMAS_[SHEETS.SETTINGS] = ['Key', 'Value', 'UpdatedAt'];
 
+// Kolom-kolom ini HARUS tetap Plain Text -- isinya string tanggal ('yyyy-MM-dd'/
+// 'yyyy-MM') yang dibandingkan sebagai TEKS di banyak tempat (filter periode
+// Dashboard/Laporan, pencocokan bulan Gaji Capster, dst). Tanpa format Plain
+// Text, Google Sheets diam-diam mengonversi nilai yang "terlihat seperti
+// tanggal" jadi tipe Date sungguhan saat ditulis, membuat semua perbandingan
+// teks itu gagal TANPA error apa pun (lihat juga rowToObject_ di Utils.gs
+// yang menormalkan balik baris LAMA yang mungkin sudah terlanjur ke-convert).
+var TEXT_FORMAT_COLUMNS_ = {};
+TEXT_FORMAT_COLUMNS_[SHEETS.TRANSAKSI_BARBER] = ['Tanggal'];
+TEXT_FORMAT_COLUMNS_[SHEETS.TRANSAKSI_WARKOP] = ['Tanggal'];
+TEXT_FORMAT_COLUMNS_[SHEETS.PENGELUARAN_BARBER] = ['Tanggal'];
+TEXT_FORMAT_COLUMNS_[SHEETS.PENGELUARAN_WARKOP] = ['Tanggal'];
+TEXT_FORMAT_COLUMNS_[SHEETS.CLOSING_SHIFT] = ['TanggalShift'];
+TEXT_FORMAT_COLUMNS_[SHEETS.GAJI_CAPSTER] = ['Periode'];
+TEXT_FORMAT_COLUMNS_[SHEETS.DASHBOARD] = ['Tanggal'];
+
 var DEFAULT_SETTINGS_ = [
   ['nama_usaha', 'Barber & Warkop'],
   ['alamat', ''],
@@ -131,7 +147,36 @@ function ensureSheetWithHeaders_(ss, sheetName, headers) {
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#1e293b').setFontColor('#ffffff');
   }
+  applyTextFormatColumns_(sheet, sheetName, headers);
   return sheet;
+}
+
+/** Konversi indeks kolom (1-based) ke huruf kolom A1 (1->A, 27->AA, dst). */
+function columnIndexToLetter_(index) {
+  var letter = '';
+  while (index > 0) {
+    var rem = (index - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    index = Math.floor((index - 1) / 26);
+  }
+  return letter;
+}
+
+/**
+ * Kunci kolom tanggal-string (lihat TEXT_FORMAT_COLUMNS_) sebagai Plain Text
+ * mulai baris 2 sampai akhir kolom (rentang terbuka "C2:C") -- ini juga
+ * berlaku untuk baris yang DITAMBAHKAN nanti lewat appendRow(), tidak cuma
+ * baris yang sudah ada saat ini. Aman & murah dijalankan berulang.
+ */
+function applyTextFormatColumns_(sheet, sheetName, headers) {
+  var columns = TEXT_FORMAT_COLUMNS_[sheetName];
+  if (!columns) return;
+  columns.forEach(function (columnName) {
+    var colIndex = headers.indexOf(columnName) + 1;
+    if (colIndex < 1) return;
+    var letter = columnIndexToLetter_(colIndex);
+    sheet.getRange(letter + '2:' + letter).setNumberFormat('@');
+  });
 }
 
 function removeDefaultBlankSheet_(ss) {
