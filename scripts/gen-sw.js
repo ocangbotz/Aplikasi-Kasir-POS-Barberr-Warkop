@@ -20,7 +20,7 @@ const crypto = require('crypto');
 
 const FRONTEND = path.join(__dirname, '..', 'frontend');
 const CACHE_EXTENSIONS = new Set(['.html', '.css', '.js', '.png', '.svg', '.webmanifest', '.ico']);
-const RUNTIME_ROOTS = ['index.html', 'manifest.webmanifest', 'assets/css', 'assets/js', 'assets/icons'];
+const RUNTIME_ROOTS = ['index.html', 'manifest.webmanifest', 'assets/css', 'assets/js', 'assets/icons', 'assets/screenshots'];
 
 function walk(fullPath, relPath, files) {
   const stat = fs.statSync(fullPath);

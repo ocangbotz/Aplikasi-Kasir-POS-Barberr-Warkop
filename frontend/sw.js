@@ -9,7 +9,7 @@
  * fresh -- kegagalan jaringan ditangani apiCall() (lihat core/api.js,
  * ApiError kode NETWORK_ERROR), bukan oleh Service Worker.
  */
-const CACHE_NAME = 'kbw-cache-593099deb9';
+const CACHE_NAME = 'kbw-cache-1fe36a13b4';
 const PRECACHE_URLS = [
   "./",
   "./assets/css/app.css",
@@ -65,6 +65,8 @@ const PRECACHE_URLS = [
   "./assets/js/vendor/chart.umd.min.js",
   "./assets/js/vendor/jspdf.plugin.autotable.min.js",
   "./assets/js/vendor/jspdf.umd.min.js",
+  "./assets/screenshots/screenshot-narrow-transaksi.png",
+  "./assets/screenshots/screenshot-wide-dashboard.png",
   "./index.html",
   "./manifest.webmanifest"
 ];
