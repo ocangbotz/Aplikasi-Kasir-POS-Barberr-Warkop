@@ -145,7 +145,7 @@ async function main() {
 
     await page.fill('#bonus', '20000');
     await page.click('#gaji-submit');
-    await waitForToastContaining(page, 'berhasil disimpan');
+    await waitForToastContaining(page, 'Gaji capster berhasil disimpan');
     await page.waitForFunction(() => document.querySelector('#gaji-body').innerText.includes('Rizky'), { timeout: 5000 });
     ok('Gaji Capster tersimpan dan tampil di riwayat');
 
@@ -189,7 +189,12 @@ async function main() {
     await page.selectOption('#user-role', 'Kasir');
     await page.fill('#user-password', 'password123');
     await page.click('#user-submit');
-    await waitForToastContaining(page, 'berhasil disimpan');
+    // Substring HARUS spesifik -- "Gaji capster berhasil disimpan." (langkah
+    // sebelumnya) juga mengandung kata "berhasil disimpan" dan bisa masih
+    // terlihat (toast baru hilang otomatis setelah ~3.5 detik), menyebabkan
+    // waitForToastContaining menangkap toast LAMA itu dan lanjut mengecek
+    // tabel sebelum load() akun baru benar-benar selesai.
+    await waitForToastContaining(page, 'Akun berhasil disimpan');
     const userBody = await page.locator('#user-body').innerText();
     if (userBody.includes('kasirbaru')) ok('Owner berhasil membuat akun Kasir baru lewat Kelola User');
     else bad('Akun baru tidak muncul di daftar user: ' + userBody);

@@ -533,6 +533,30 @@ test('rowToObject_ menormalkan kolom Tanggal yang sudah ter-konversi Google Shee
   assert.strictEqual(after.hariIni.transaksi, before.hariIni.transaksi + 1);
 });
 
+test('rowToObject_ menormalkan kolom Jam yang sudah ter-konversi Google Sheets jadi Date (bug lanjutan: r.Jam.slice bukan fungsi)', () => {
+  const trx = ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Simulasi Jam Auto-Convert', noHp: '081200077755', capsterId: capsterBudi.ID,
+    layanan: [{ layananId: layananGunting.ID, nama: layananGunting.Nama, harga: layananGunting.Harga }],
+    metodePembayaran: 'Cash'
+  }).transaksi;
+
+  // Sama seperti kolom Tanggal, kolom "Jam" (mis. "14:30:00") juga bisa
+  // diam-diam dikonversi Sheets jadi tipe Date/Time -- ini yang menyebabkan
+  // "r.Jam.slice is not a function" di buildTrendSeries_ (granularitas grafik
+  // per jam untuk filter "Hari Ini").
+  const data = ctx.getSheetData_(ctx.SHEETS.TRANSAKSI_BARBER);
+  const jamCol = data.headers.indexOf('Jam');
+  const rowIdx = data.rows.findIndex((r) => r.ID === trx.ID);
+  assert.ok(rowIdx !== -1, 'baris transaksi harus ditemukan');
+  data.sheet.data[rowIdx + 1][jamCol] = new Date(ctx.todayDateString_() + 'T14:30:00');
+
+  // filter 'today' -> granularitas grafik = 'hour' -> memanggil r.Jam.slice(0,2);
+  // ini TIDAK BOLEH throw walau kolom Jam ber-tipe Date, bukan string.
+  const after = ctx.dashboardData_({ token: ownerToken, usaha: 'Barber', filter: 'today' });
+  const found = after.chartPendapatan.labels.length > 0;
+  assert.ok(found, 'grafik per jam harus berhasil dibangun tanpa error walau kolom Jam ber-tipe Date');
+});
+
 test('dashboardData_: Laba Bersih selalu = Pendapatan - Pengeluaran (Barber, Warkop, Gabungan)', () => {
   ['Barber', 'Warkop', 'Gabungan'].forEach((usaha) => {
     const data = ctx.dashboardData_({ token: ownerToken, usaha, filter: 'today' });
