@@ -6,7 +6,7 @@ import { apiCall, ApiError } from '../../core/api.js';
 import { toastError } from '../../core/toast.js';
 import { renderLineChart } from '../../core/charts.js';
 import { CHART_COLORS } from '../../core/charts.js';
-import { filterBarHtml, wireFilterBar, setPeriodeLabel, metricCardsHtml } from './shared.js';
+import { filterBarHtml, wireFilterBar, setPeriodeLabel, metricCardsHtml, isOwnerRole } from './shared.js';
 
 export async function renderDashboardGabungan(root) {
   root.innerHTML = `
@@ -21,10 +21,11 @@ export async function renderDashboardGabungan(root) {
         <h2 class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Hari Ini</h2>
         <div id="cards-hari-ini" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"></div>
       </div>
+      ${isOwnerRole() ? `
       <div>
         <h2 class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Bulan Ini</h2>
         <div id="cards-bulan-ini" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"></div>
-      </div>
+      </div>` : ''}
       <div>
         <h2 class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Periode Terpilih</h2>
         <div id="cards-periode" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"></div>
@@ -43,7 +44,8 @@ export async function renderDashboardGabungan(root) {
     try {
       const data = await apiCall('dashboardData', { usaha: 'Gabungan', ...state });
       root.querySelector('#cards-hari-ini').innerHTML = metricCardsHtml(data.hariIni);
-      root.querySelector('#cards-bulan-ini').innerHTML = metricCardsHtml(data.bulanIni);
+      const bulanIniEl = root.querySelector('#cards-bulan-ini');
+      if (bulanIniEl) bulanIniEl.innerHTML = metricCardsHtml(data.bulanIni);
       root.querySelector('#cards-periode').innerHTML = metricCardsHtml(data.periodeMetrics);
       setPeriodeLabel(root, data.periode);
 
