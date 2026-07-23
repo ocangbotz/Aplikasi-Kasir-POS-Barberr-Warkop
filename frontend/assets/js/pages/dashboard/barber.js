@@ -6,7 +6,7 @@ import { apiCall, ApiError } from '../../core/api.js';
 import { toastError } from '../../core/toast.js';
 import { renderLineChart, renderBarChart, renderDoughnutChart, CHART_COLORS } from '../../core/charts.js';
 import { formatRupiah } from '../../core/format.js';
-import { filterBarHtml, wireFilterBar, setPeriodeLabel, metricCardsHtml, statCard, leaderboardHtml, leaderboardRow } from './shared.js';
+import { filterBarHtml, wireFilterBar, setPeriodeLabel, metricCardsHtml, statCard, leaderboardHtml, leaderboardRow, isOwnerRole } from './shared.js';
 
 export async function renderDashboardBarber(root) {
   root.innerHTML = `
@@ -19,10 +19,11 @@ export async function renderDashboardBarber(root) {
         <h2 class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Hari Ini</h2>
         <div id="cards-hari-ini" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7"></div>
       </div>
+      ${isOwnerRole() ? `
       <div>
         <h2 class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Bulan Ini</h2>
         <div id="cards-bulan-ini" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7"></div>
-      </div>
+      </div>` : ''}
       <div>
         <h2 class="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Periode Terpilih</h2>
         <div id="cards-periode" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-7"></div>
@@ -58,7 +59,8 @@ export async function renderDashboardBarber(root) {
     try {
       const data = await apiCall('dashboardData', { usaha: 'Barber', ...state });
       root.querySelector('#cards-hari-ini').innerHTML = metricCardsHtml(data.hariIni, extraCards(data.hariIni));
-      root.querySelector('#cards-bulan-ini').innerHTML = metricCardsHtml(data.bulanIni, extraCards(data.bulanIni));
+      const bulanIniEl = root.querySelector('#cards-bulan-ini');
+      if (bulanIniEl) bulanIniEl.innerHTML = metricCardsHtml(data.bulanIni, extraCards(data.bulanIni));
       root.querySelector('#cards-periode').innerHTML = metricCardsHtml(data.periodeMetrics, extraCards(data.periodeMetrics));
       setPeriodeLabel(root, data.periode);
 

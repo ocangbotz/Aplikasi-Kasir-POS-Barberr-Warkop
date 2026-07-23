@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.ocangbotz.twa",
+      "sha256_cert_fingerprints": ["5A:DF:63:E5:32:AD:FC:8E:C1:9E:DC:84:7E:AD:2A:21:1C:C6:F5:FD:1D:E0:CD:1D:13:71:86:E7:5B:19:A0:27"]
+    }
+  }
+]

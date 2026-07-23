@@ -3,8 +3,9 @@
  * Komponen & helper bersama untuk 3 dashboard (Gabungan/Barber/Warkop):
  * filter bar (Hari Ini/Kemarin/Minggu/Bulan/Tahun/Custom) dan kartu metrik.
  * Filter mengontrol "Periode Terpilih" + seluruh grafik/leaderboard, sementara
- * kartu Hari Ini & Bulan Ini selalu tetap -- lihat catatan desain di
- * backend/src/Dashboard.gs.
+ * kartu Hari Ini & Bulan Ini selalu tetap untuk Owner -- lihat catatan desain
+ * di backend/src/Dashboard.gs. Untuk Kasir, kartu "Bulan Ini" disembunyikan
+ * (permintaan pemilik usaha) -- lihat isOwnerRole().
  */
 import { formatRupiah, todayISODate } from '../../core/format.js';
 import { getCurrentUser } from '../../core/auth.js';
@@ -18,15 +19,19 @@ const FILTERS = [
   { value: 'custom', label: 'Custom' }
 ];
 
+/** true hanya untuk Owner -- dipakai untuk membatasi tampilan yang khusus Kasir. */
+export function isOwnerRole() {
+  const user = getCurrentUser();
+  return !!user && user.role === 'Owner';
+}
+
 /**
  * Kasir hanya butuh lihat data "Hari Ini" (permintaan pemilik usaha, supaya
  * tampilan Dashboard/Laporan tidak membingungkan kasir) -- Owner tetap bisa
  * pilih periode apapun.
  */
 function availableFilters() {
-  const user = getCurrentUser();
-  if (user && user.role !== 'Owner') return FILTERS.filter((f) => f.value === 'today');
-  return FILTERS;
+  return isOwnerRole() ? FILTERS : FILTERS.filter((f) => f.value === 'today');
 }
 
 export function filterBarHtml() {
