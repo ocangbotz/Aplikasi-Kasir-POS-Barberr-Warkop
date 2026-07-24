@@ -7,8 +7,11 @@ import { apiCall, ApiError } from '../../core/api.js';
 import { toastError, toastSuccess } from '../../core/toast.js';
 import { formatRupiah } from '../../core/format.js';
 import { openWarkopStrukModal } from './struk.js';
+import { ensureShiftOpenForKasir } from '../shift/requireShift.js';
 
 export async function renderWarkopPesanan(root) {
+  if (!(await ensureShiftOpenForKasir(root))) return;
+
   root.innerHTML = `
     <div class="mx-auto grid max-w-5xl gap-4 lg:grid-cols-5">
       <div class="glass-card p-4 lg:col-span-3">
