@@ -109,6 +109,14 @@ function barberCreateTransaksi_(payload) {
   requirePermission_(session, 'transaksiBarber');
   requireFields_(payload, ['namaPelanggan', 'capsterId', 'layanan', 'metodePembayaran']);
 
+  // Kasir WAJIB membuka shift dulu sebelum bisa transaksi (permintaan pemilik
+  // usaha, supaya semua transaksi Kasir selalu tercatat dalam satu shift yang
+  // jelas). Owner tidak dibatasi -- shift memang konsep operasional Kasir.
+  var shiftId = currentOpenShiftId_(session);
+  if (session.role === ROLES.KASIR && !shiftId) {
+    throw new AppError_('VALIDATION_ERROR', 'Anda harus membuka shift terlebih dahulu sebelum membuat transaksi.');
+  }
+
   if (!Array.isArray(payload.layanan) || payload.layanan.length === 0) {
     throw new AppError_('VALIDATION_ERROR', 'Minimal 1 layanan harus dipilih.');
   }
@@ -173,7 +181,7 @@ function barberCreateTransaksi_(payload) {
     Catatan: sanitizeString_(payload.catatan),
     KasirID: session.userId,
     NamaKasir: session.nama,
-    ShiftID: currentOpenShiftId_(session),
+    ShiftID: shiftId,
     CreatedAt: new Date(),
     UpdatedAt: new Date(),
     IsDeleted: false

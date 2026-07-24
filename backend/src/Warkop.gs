@@ -74,6 +74,14 @@ function warkopCreateTransaksi_(payload) {
     throw new AppError_('VALIDATION_ERROR', 'Minimal 1 menu harus dipesan.');
   }
 
+  // Kasir WAJIB membuka shift dulu sebelum bisa transaksi (permintaan pemilik
+  // usaha, supaya semua transaksi Kasir selalu tercatat dalam satu shift yang
+  // jelas). Owner tidak dibatasi -- shift memang konsep operasional Kasir.
+  var shiftId = currentOpenShiftId_(session);
+  if (session.role === ROLES.KASIR && !shiftId) {
+    throw new AppError_('VALIDATION_ERROR', 'Anda harus membuka shift terlebih dahulu sebelum membuat transaksi.');
+  }
+
   // Ambil & kunci data produk sekali di awal supaya validasi stok konsisten.
   var produkData = getSheetData_(SHEETS.PRODUK_WARKOP);
   var produkById = {};
@@ -159,7 +167,7 @@ function warkopCreateTransaksi_(payload) {
     KasirID: session.userId,
     NamaKasir: session.nama,
     PelangganID: pelanggan ? pelanggan.ID : '',
-    ShiftID: currentOpenShiftId_(session),
+    ShiftID: shiftId,
     CreatedAt: new Date(),
     UpdatedAt: new Date(),
     IsDeleted: false

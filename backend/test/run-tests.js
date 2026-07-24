@@ -236,6 +236,21 @@ test('Setup akun Kasir untuk uji permission', () => {
   assert.ok(kasirToken);
 });
 
+test('Kasir dilarang membuat transaksi (Barber/Warkop) sebelum membuka shift', () => {
+  assertThrowsCode(() => ctx.barberCreateTransaksi_({
+    token: kasirToken, namaPelanggan: 'Tanpa Shift', capsterId: 'dummy',
+    layanan: [{ nama: 'X', harga: 10000 }], metodePembayaran: 'Cash', uangDiterima: 10000
+  }), 'VALIDATION_ERROR');
+  assertThrowsCode(() => ctx.warkopCreateTransaksi_({
+    token: kasirToken, items: [{ produkId: 'dummy', qty: 1 }], metodePembayaran: 'Cash', uangDiterima: 10000
+  }), 'VALIDATION_ERROR');
+});
+
+test('Kasir membuka shift lebih awal supaya test-test transaksi berikutnya bisa jalan', () => {
+  const shift = ctx.shiftOpen_({ token: kasirToken, saldoAwal: 100000 }).shift;
+  assert.strictEqual(shift.Status, 'Terbuka');
+});
+
 test('Kasir kini boleh membuat/mengubah layanan & capster (kewenangan Admin lama sudah melekat ke Kasir)', () => {
   const layanan = ctx.barberSaveLayanan_({ token: kasirToken, nama: 'Layanan oleh Kasir', harga: 15000 }).layanan;
   assert.strictEqual(layanan.Nama, 'Layanan oleh Kasir');
@@ -751,6 +766,10 @@ test('Menu Terlaris & Kategori Terlaris Warkop dihitung dari qty terjual', () =>
   assert.ok(data.menuTerlaris.length > 0);
   assert.ok(data.kategoriTerlaris.length > 0);
   assert.ok(data.kategoriTerlaris.some((k) => k.kategori === 'Minuman'));
+});
+
+test('Tutup shift awal supaya modul Closing Shift di bawah mulai dari kondisi bersih (tidak ada shift terbuka)', () => {
+  ctx.shiftClose_({ token: kasirToken, uangKasFisik: 0 });
 });
 
 // --- Modul Closing Shift ---
