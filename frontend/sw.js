@@ -9,7 +9,7 @@
  * fresh -- kegagalan jaringan ditangani apiCall() (lihat core/api.js,
  * ApiError kode NETWORK_ERROR), bukan oleh Service Worker.
  */
-const CACHE_NAME = 'kbw-cache-1fe36a13b4';
+const CACHE_NAME = 'kbw-cache-720225891f';
 const PRECACHE_URLS = [
   "./",
   "./assets/css/app.css",

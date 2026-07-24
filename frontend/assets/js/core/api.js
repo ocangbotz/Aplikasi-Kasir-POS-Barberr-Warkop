@@ -22,6 +22,17 @@ function currentToken() {
   return session ? session.token : '';
 }
 
+// Indikator "sedang memuat" global (garis tipis di atas layar, lihat
+// #global-loading-bar di index.html/input.css) -- ditampilkan otomatis
+// selama ADA MINIMAL SATU apiCall() yang belum selesai, supaya latensi
+// backend Apps Script (biasanya 1-3 detik/request) terlihat sebagai
+// "sedang memuat", bukan seperti macet.
+let pendingRequests = 0;
+function setLoadingBarActive(active) {
+  const bar = document.getElementById('global-loading-bar');
+  if (bar) bar.classList.toggle('active', active);
+}
+
 /**
  * Panggil satu action backend.
  * @param {string} action - nama action sesuai ROUTES di backend/src/Code.gs
@@ -35,30 +46,37 @@ export async function apiCall(action, payload = {}) {
     );
   }
 
-  const body = JSON.stringify({ action, token: currentToken(), ...payload });
-
-  let response;
+  pendingRequests++;
+  setLoadingBarActive(true);
   try {
-    response = await fetch(APP_CONFIG.API_BASE_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body
-    });
-  } catch (networkErr) {
-    throw new ApiError('NETWORK_ERROR', 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
-  }
+    const body = JSON.stringify({ action, token: currentToken(), ...payload });
 
-  let json;
-  try {
-    json = await response.json();
-  } catch {
-    throw new ApiError('BAD_RESPONSE', 'Respon server tidak valid.');
-  }
+    let response;
+    try {
+      response = await fetch(APP_CONFIG.API_BASE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body
+      });
+    } catch (networkErr) {
+      throw new ApiError('NETWORK_ERROR', 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.');
+    }
 
-  if (!json.ok) {
-    const err = json.error || {};
-    throw new ApiError(err.code || 'UNKNOWN_ERROR', err.message || 'Terjadi kesalahan.');
-  }
+    let json;
+    try {
+      json = await response.json();
+    } catch {
+      throw new ApiError('BAD_RESPONSE', 'Respon server tidak valid.');
+    }
 
-  return json.data;
+    if (!json.ok) {
+      const err = json.error || {};
+      throw new ApiError(err.code || 'UNKNOWN_ERROR', err.message || 'Terjadi kesalahan.');
+    }
+
+    return json.data;
+  } finally {
+    pendingRequests = Math.max(0, pendingRequests - 1);
+    if (pendingRequests === 0) setLoadingBarActive(false);
+  }
 }

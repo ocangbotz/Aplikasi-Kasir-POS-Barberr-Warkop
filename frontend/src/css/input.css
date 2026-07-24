@@ -91,6 +91,44 @@
   }
 }
 
+/*
+ * Indikator "sedang memuat" global (garis tipis di atas layar), dipicu
+ * otomatis oleh SETIAP panggilan apiCall() (lihat core/api.js) -- termasuk
+ * saat pindah halaman, ganti filter, submit form, dst. Backend Apps Script
+ * punya latensi bawaan (biasanya 1-3 detik per request); tanpa indikator ini
+ * layar cuma diam saat menunggu, terasa seperti macet/lambat padahal
+ * sedang memuat. Selalu ada di DOM (lihat index.html), disembunyikan lewat
+ * opacity supaya tidak perlu re-render saat show/hide.
+ */
+#global-loading-bar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 3px;
+  z-index: 200;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+#global-loading-bar.active {
+  opacity: 1;
+}
+.global-loading-bar-inner {
+  position: absolute;
+  top: 0;
+  left: -35%;
+  height: 100%;
+  width: 35%;
+  background: linear-gradient(90deg, var(--color-barber-500), var(--color-gabungan-500), var(--color-warkop-500));
+}
+#global-loading-bar.active .global-loading-bar-inner {
+  animation: loading-bar-slide 1s ease-in-out infinite;
+}
+@keyframes loading-bar-slide {
+  0% { left: -35%; }
+  100% { left: 100%; }
+}
+
 /* Cetak struk: sembunyikan semua isi halaman kecuali area struk. */
 @media print {
   body * {
