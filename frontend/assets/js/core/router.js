@@ -6,6 +6,7 @@
  * tinggal plug-in tanpa mengubah file ini.
  */
 import { isAuthenticated, hasPermission } from './auth.js';
+import { wireScrollHints } from './scrollHint.js';
 
 const routes = new Map();
 let appRoot = null;
@@ -81,6 +82,7 @@ async function handleRouteChange() {
     return;
   }
   if (typeof result === 'function') currentCleanup = result;
+  wireScrollHints(container);
 }
 
 let listenerAttached = false;
