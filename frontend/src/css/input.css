@@ -173,7 +173,19 @@
   left: 6px;
 }
 
-/* Cetak struk: sembunyikan semua isi halaman kecuali area struk. */
+/* Hilangkan margin halaman bawaan browser & pakai ukuran kertas apa adanya
+   (mengikuti driver printer thermal -- 58mm atau 80mm) supaya struk tidak
+   ketambahan spasi kosong/margin di kertas gulung. */
+@page {
+  size: auto;
+  margin: 0;
+}
+
+/* Cetak struk: sembunyikan semua isi halaman kecuali area struk.
+   width:100% + max-width:80mm (bukan width:80mm tetap) supaya otomatis
+   menyesuaikan baik untuk printer thermal 80mm MAUPUN 58mm (dua ukuran
+   kertas struk yang paling umum dipakai usaha kecil) -- di kertas 58mm
+   otomatis menyusut mengikuti lebar kertas, tidak terpotong di kanan. */
 @media print {
   body * {
     visibility: hidden;
@@ -184,7 +196,8 @@
   #struk-print-area {
     position: absolute;
     inset: 0;
-    width: 80mm;
+    width: 100%;
+    max-width: 80mm;
     margin: 0 auto;
   }
 }
